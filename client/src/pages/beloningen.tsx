@@ -2068,12 +2068,18 @@ function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
 
   const deleteActieMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/jaarplan/acties/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan/onderdelen", onderdeel.id, "acties"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan/onderdelen", onderdeel.id, "acties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", jaarplanId, "acties"] });
+    },
   });
 
   const updateActieStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/jaarplan/acties/${id}`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan/onderdelen", onderdeel.id, "acties"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan/onderdelen", onderdeel.id, "acties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", jaarplanId, "acties"] });
+    },
     onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
   });
 
@@ -2162,7 +2168,6 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
       if (!res.ok) throw new Error("Ophalen mislukt");
       return res.json();
     },
-    enabled: showActies,
   });
 
   const { data: onderdelen = [] } = useQuery<JaarplanOnderdeel[]>({
@@ -2217,6 +2222,9 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
   const statusOpt = statusOptions.find(s => s.value === item.status) || statusOptions[0];
   const looseActies = acties.filter(a => !a.onderdeelId);
   const totalCount = acties.length + onderdelen.length;
+  const totalActies = acties.length;
+  const afgerondCount = acties.filter(a => a.status === "afgerond").length;
+  const progressPct = totalActies > 0 ? Math.round((afgerondCount / totalActies) * 100) : 0;
 
   return (
     <div className="border rounded-lg p-3" data-testid={`jaarplan-plan-${item.id}`}>
@@ -2244,6 +2252,22 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
           )}
         </div>
       </div>
+
+      {totalActies > 0 && (
+        <div className="mt-2" data-testid={`progress-acties-${item.id}`}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-muted-foreground">{afgerondCount}/{totalActies} acties afgerond</span>
+            <span className="text-[11px] text-muted-foreground">{progressPct}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+              style={{ width: `${progressPct}%` }}
+              data-testid={`progress-bar-${item.id}`}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-2 border-t pt-2 space-y-2">
         <div className="flex items-center justify-between">
