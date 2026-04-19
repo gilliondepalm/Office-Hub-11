@@ -2096,24 +2096,42 @@ function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
   return (
     <div className="border rounded-md" data-testid={`onderdeel-${onderdeel.id}`}>
       <div className="flex items-center gap-1 px-2 py-1.5 bg-muted/30 rounded-t-md">
-        <button className="flex items-center gap-1 flex-1 min-w-0 text-xs font-semibold hover:text-foreground transition-colors text-left" onClick={() => setExpanded(v => !v)} data-testid={`button-toggle-onderdeel-${onderdeel.id}`}>
-          {expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-          <FolderOpen className="h-3 w-3 shrink-0 text-primary" />
-          {editing ? (
-            <span onClick={e => e.stopPropagation()} className="flex items-center gap-1 flex-1">
-              <Input value={editNaam} onChange={e => setEditNaam(e.target.value)} className="h-6 text-xs py-0 px-1" data-testid={`input-onderdeel-naam-${onderdeel.id}`} />
-              <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={e => { e.stopPropagation(); renameOnderdeelMutation.mutate(); }} disabled={!editNaam.trim() || renameOnderdeelMutation.isPending}><Save className="h-3 w-3" /></Button>
-              <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={e => { e.stopPropagation(); setEditing(false); setEditNaam(onderdeel.naam); }}><X className="h-3 w-3" /></Button>
-            </span>
-          ) : (
-            <span className="truncate">{onderdeel.naam}</span>
-          )}
-        </button>
-        {canEdit && !editing && (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={e => { e.stopPropagation(); setEditing(true); }} data-testid={`button-rename-onderdeel-${onderdeel.id}`}><Pencil className="h-2.5 w-2.5" /></Button>
-            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-destructive" onClick={e => { e.stopPropagation(); onDelete(); }} data-testid={`button-delete-onderdeel-${onderdeel.id}`}><Trash2 className="h-2.5 w-2.5" /></Button>
+        {editing ? (
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            {expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+            <FolderOpen className="h-3 w-3 shrink-0 text-primary" />
+            <Input
+              value={editNaam}
+              onChange={e => setEditNaam(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && editNaam.trim() && !renameOnderdeelMutation.isPending) {
+                  renameOnderdeelMutation.mutate();
+                } else if (e.key === "Escape") {
+                  setEditing(false);
+                  setEditNaam(onderdeel.naam);
+                }
+              }}
+              autoFocus
+              className="h-6 text-xs py-0 px-1 flex-1"
+              data-testid={`input-onderdeel-naam-${onderdeel.id}`}
+            />
+            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => renameOnderdeelMutation.mutate()} disabled={!editNaam.trim() || renameOnderdeelMutation.isPending} data-testid={`button-save-rename-onderdeel-${onderdeel.id}`}><Save className="h-3 w-3" /></Button>
+            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => { setEditing(false); setEditNaam(onderdeel.naam); }} data-testid={`button-cancel-rename-onderdeel-${onderdeel.id}`}><X className="h-3 w-3" /></Button>
           </div>
+        ) : (
+          <>
+            <button className="flex items-center gap-1 flex-1 min-w-0 text-xs font-semibold hover:text-foreground transition-colors text-left" onClick={() => setExpanded(v => !v)} data-testid={`button-toggle-onderdeel-${onderdeel.id}`}>
+              {expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+              <FolderOpen className="h-3 w-3 shrink-0 text-primary" />
+              <span className="truncate">{onderdeel.naam}</span>
+            </button>
+            {canEdit && (
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={e => { e.stopPropagation(); setEditing(true); }} data-testid={`button-rename-onderdeel-${onderdeel.id}`}><Pencil className="h-2.5 w-2.5" /></Button>
+                <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-destructive" onClick={e => { e.stopPropagation(); onDelete(); }} data-testid={`button-delete-onderdeel-${onderdeel.id}`}><Trash2 className="h-2.5 w-2.5" /></Button>
+              </div>
+            )}
+          </>
         )}
       </div>
       {expanded && (
