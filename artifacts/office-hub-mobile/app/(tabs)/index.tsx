@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import { Card } from "@/components/Card";
+import MiniCalendar from "@/components/MiniCalendar";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/AuthContext";
 import { apiJson } from "@/lib/api";
@@ -121,35 +122,6 @@ export default function DashboardScreen() {
         </View>
       </ImageBackground>
 
-      <View style={styles.statsRow}>
-        <StatCard
-          icon="users"
-          label="Medewerkers"
-          value={stats.data?.totalEmployees}
-          loading={stats.isLoading}
-        />
-        <StatCard
-          icon="user-x"
-          label="Afwezig vandaag"
-          value={stats.data?.todayAbsent}
-          loading={stats.isLoading}
-        />
-      </View>
-      <View style={styles.statsRow}>
-        <StatCard
-          icon="calendar"
-          label="Komende events"
-          value={stats.data?.upcomingEvents}
-          loading={stats.isLoading}
-        />
-        <StatCard
-          icon="inbox"
-          label="Open verzoeken"
-          value={stats.data?.pendingRequests}
-          loading={stats.isLoading}
-        />
-      </View>
-
       <Section title="Aankondigingen">
         {announcements.isLoading ? (
           <ActivityIndicator color={colors.primary} />
@@ -174,6 +146,10 @@ export default function DashboardScreen() {
             </Card>
           ))
         )}
+      </Section>
+
+      <Section title="Kalender">
+        <MiniCalendar />
       </Section>
 
       <Section
