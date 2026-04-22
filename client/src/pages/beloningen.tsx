@@ -2382,6 +2382,12 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     eindDatum: "",
     status: "niet gestart",
   });
+  const [isPrintLoading, setIsPrintLoading] = useState(false);
+  const [printData, setPrintData] = useState<Record<string, {
+    onderdelen: JaarplanOnderdeel[];
+    actiesByOnderdeel: Record<string, JaarplanActie[]>;
+    looseActies: JaarplanActie[];
+  }> | null>(null);
 
   const { data: departments } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/departments"],
@@ -2467,6 +2473,47 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     return acc;
   }, {} as Record<string, JaarplanItem[]>);
 
+  const fetchJson = async <T,>(url: string): Promise<T> => {
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) throw new Error(`Ophalen mislukt: ${url}`);
+    return res.json();
+  };
+
+  const handlePrint = async () => {
+    setIsPrintLoading(true);
+    try {
+      const data: Record<string, {
+        onderdelen: JaarplanOnderdeel[];
+        actiesByOnderdeel: Record<string, JaarplanActie[]>;
+        looseActies: JaarplanActie[];
+      }> = {};
+      await Promise.all(items.map(async (item) => {
+        const [acties, onderdelen] = await Promise.all([
+          fetchJson<JaarplanActie[]>(`/api/jaarplan/${item.id}/acties`),
+          fetchJson<JaarplanOnderdeel[]>(`/api/jaarplan/${item.id}/onderdelen`),
+        ]);
+        const actiesByOnderdeel: Record<string, JaarplanActie[]> = {};
+        await Promise.all(onderdelen.map(async (ond) => {
+          actiesByOnderdeel[ond.id] = await fetchJson<JaarplanActie[]>(`/api/jaarplan/onderdelen/${ond.id}/acties`);
+        }));
+        data[item.id] = {
+          onderdelen,
+          actiesByOnderdeel,
+          looseActies: acties.filter(a => !a.onderdeelId),
+        };
+      }));
+      setPrintData(data);
+      setTimeout(() => {
+        window.print();
+        setPrintData(null);
+        setIsPrintLoading(false);
+      }, 200);
+    } catch {
+      toast({ title: "Afdrukken mislukt", variant: "destructive" });
+      setIsPrintLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between print:hidden">
@@ -2499,11 +2546,17 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
               Nieuw Plan
             </Button>
           )}
+          {items.length > 0 && (
+            <Button variant="outline" onClick={handlePrint} disabled={isPrintLoading} data-testid="button-print-jaarplan">
+              <Printer className="h-4 w-4 mr-2" />
+              {isPrintLoading ? "Laden..." : "Afdrukken"}
+            </Button>
+          )}
         </div>
       </div>
 
       {showForm && canEdit && (
-        <Card className="border border-border/60">
+        <Card className="border border-border/60 print:hidden">
           <CardContent className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold">{editingItem ? "Plan bewerken" : "Nieuw jaarplan"}</h4>
@@ -2573,42 +2626,136 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
         </Card>
       )}
 
-      {isLoading ? (
-        <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
-      ) : items.length === 0 ? (
-        <Card className="border border-dashed">
-          <CardContent className="p-8 text-center">
-            <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Geen jaarplannen voor {selectedYear}</p>
-            {canEdit && (
-              <Button variant="link" onClick={handleNewItem} className="mt-2" data-testid="button-new-jaarplan-empty">
-                Voeg een plan toe
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
+      <div className="print:hidden">
+        {isLoading ? (
+          <div className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
+        ) : items.length === 0 ? (
+          <Card className="border border-dashed">
+            <CardContent className="p-8 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Geen jaarplannen voor {selectedYear}</p>
+              {canEdit && (
+                <Button variant="link" onClick={handleNewItem} className="mt-2" data-testid="button-new-jaarplan-empty">
+                  Voeg een plan toe
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(groupedByAfdeling).sort(([a], [b]) => a.localeCompare(b)).map(([afdeling, afdelingItems]) => (
+              <Card key={afdeling} className="border border-border/60">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold" data-testid={`jaarplan-afdeling-${afdeling}`}>{afdeling}</h3>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  {afdelingItems.map(item => (
+                    <JaarplanItemCard
+                      key={item.id}
+                      item={item}
+                      canEdit={canEdit}
+                      onEdit={() => handleEditItem(item)}
+                      onDelete={() => deleteMutation.mutate(item.id)}
+                    />
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {printData && (
+        <div className="hidden print:block print-jaarplan-layout">
+          <div className="text-center mb-6">
+            <h1 className="text-xl font-bold">Jaarplan {selectedYear}</h1>
+            {adminAfdeling !== "__all__" && <p className="text-sm text-gray-600 mt-1">Afdeling: {adminAfdeling}</p>}
+          </div>
           {Object.entries(groupedByAfdeling).sort(([a], [b]) => a.localeCompare(b)).map(([afdeling, afdelingItems]) => (
-            <Card key={afdeling} className="border border-border/60">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold" data-testid={`jaarplan-afdeling-${afdeling}`}>{afdeling}</h3>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                {afdelingItems.map(item => (
-                  <JaarplanItemCard
-                    key={item.id}
-                    item={item}
-                    canEdit={canEdit}
-                    onEdit={() => handleEditItem(item)}
-                    onDelete={() => deleteMutation.mutate(item.id)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
+            <div key={afdeling} className="mb-8 break-inside-avoid-page">
+              <div className="flex items-center gap-2 border-b-2 border-gray-800 pb-1 mb-3">
+                <h2 className="text-base font-bold">{afdeling}</h2>
+              </div>
+              {afdelingItems.map(item => {
+                const itemData = printData[item.id];
+                const statusOpt = statusOptions.find(s => s.value === item.status) || statusOptions[0];
+                const allActies = [
+                  ...(itemData?.looseActies || []),
+                  ...Object.values(itemData?.actiesByOnderdeel || {}).flat(),
+                ];
+                const afgerond = allActies.filter(a => a.status === "afgerond").length;
+                const totaal = allActies.length;
+                return (
+                  <div key={item.id} className="mb-5 pl-2 border-l-4 border-gray-300">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-sm font-semibold whitespace-pre-wrap flex-1">{item.afspraken}</p>
+                      <span className="text-xs font-medium border border-gray-400 rounded px-1.5 py-0.5 shrink-0">{statusOpt.label}</span>
+                    </div>
+                    <div className="flex gap-4 text-xs text-gray-500 mb-2">
+                      {item.startDatum && <span>Start: {formatDate(item.startDatum)}</span>}
+                      {item.eindDatum && <span>Einde: {formatDate(item.eindDatum)}</span>}
+                      {totaal > 0 && <span>{afgerond}/{totaal} acties afgerond</span>}
+                    </div>
+                    {itemData && (
+                      <div className="space-y-3 pl-2">
+                        {itemData.onderdelen.map(ond => {
+                          const ondActies = itemData.actiesByOnderdeel[ond.id] || [];
+                          return (
+                            <div key={ond.id} className="mb-2">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1">
+                                <span>▶</span>
+                                <span>{ond.naam}</span>
+                              </div>
+                              {ondActies.length > 0 ? (
+                                <div className="pl-4 space-y-0.5">
+                                  {ondActies.map(actie => {
+                                    const aStatusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+                                    return (
+                                      <div key={actie.id} className="flex items-start gap-2 text-xs py-0.5">
+                                        <span className="text-gray-400 shrink-0 min-w-[70px]">{formatDate(actie.datum)}</span>
+                                        <span className="flex-1">{actie.actie}</span>
+                                        <span className="text-gray-500 shrink-0 italic">{aStatusOpt.label}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="pl-4 text-xs text-gray-400 italic">Geen acties</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {itemData.looseActies.length > 0 && (
+                          <div>
+                            {itemData.onderdelen.length > 0 && (
+                              <div className="text-xs font-semibold text-gray-700 mb-1">Overige acties</div>
+                            )}
+                            <div className="pl-2 space-y-0.5">
+                              {itemData.looseActies.map(actie => {
+                                const aStatusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+                                return (
+                                  <div key={actie.id} className="flex items-start gap-2 text-xs py-0.5">
+                                    <span className="text-gray-400 shrink-0 min-w-[70px]">{formatDate(actie.datum)}</span>
+                                    <span className="flex-1">{actie.actie}</span>
+                                    <span className="text-gray-500 shrink-0 italic">{aStatusOpt.label}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {itemData.onderdelen.length === 0 && itemData.looseActies.length === 0 && (
+                          <p className="text-xs text-gray-400 italic">Geen activiteiten geregistreerd</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ))}
         </div>
       )}
