@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -56,6 +57,7 @@ interface AbsenceTodayResponse {
 
 export default function DashboardScreen() {
   const colors = useColors();
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   const stats = useQuery({
@@ -220,14 +222,22 @@ export default function DashboardScreen() {
                 style={{ marginBottom: 12 }}
                 testID={`dept-absence-${dept.department}`}
               >
-                <View
-                  style={{
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      `/department/${encodeURIComponent(dept.department)}` as never,
+                    )
+                  }
+                  style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 6,
                     marginBottom: 6,
                     paddingHorizontal: 2,
-                  }}
+                    paddingVertical: 2,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                  testID={`button-dept-${dept.department}`}
                 >
                   <Feather
                     name="briefcase"
@@ -256,7 +266,13 @@ export default function DashboardScreen() {
                       {managerSuffix}
                     </Text>
                   ) : null}
-                </View>
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={colors.mutedForeground}
+                    style={{ marginLeft: "auto" }}
+                  />
+                </Pressable>
                 {dept.employees.map((emp, idx) => (
                   <Card
                     key={`${dept.department}-${emp.name}-${idx}`}
