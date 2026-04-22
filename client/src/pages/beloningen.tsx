@@ -20,7 +20,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Award, Star, TrendingUp, ClipboardCheck, UserCheck, Gift, Printer, Save, ChevronLeft, ChevronRight, ChevronDown, Eye, FileText, Trash2, Settings, PlusCircle, X, Pencil, Building2, Layers, FolderOpen } from "lucide-react";
+import { Plus, Award, Star, TrendingUp, ClipboardCheck, UserCheck, Gift, Printer, Save, ChevronLeft, ChevronRight, ChevronDown, Eye, FileText, Trash2, Settings, PlusCircle, X, Pencil, Building2, Layers, FolderOpen, Download } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -2391,6 +2391,7 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     status: "niet gestart",
   });
   const [isPrintLoading, setIsPrintLoading] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [printData, setPrintData] = useState<Record<string, {
     onderdelen: JaarplanOnderdeel[];
     actiesByOnderdeel: Record<string, JaarplanActie[]>;
@@ -2529,6 +2530,148 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     return res.json();
   };
 
+  const handleDownloadPdf = async () => {
+    setIsPdfLoading(true);
+    try {
+      const data: Record<string, {
+        onderdelen: JaarplanOnderdeel[];
+        actiesByOnderdeel: Record<string, JaarplanActie[]>;
+        looseActies: JaarplanActie[];
+      }> = {};
+      await Promise.all(items.map(async (item) => {
+        const [acties, onderdelen] = await Promise.all([
+          fetchJson<JaarplanActie[]>(`/api/jaarplan/${item.id}/acties`),
+          fetchJson<JaarplanOnderdeel[]>(`/api/jaarplan/${item.id}/onderdelen`),
+        ]);
+        const actiesByOnderdeel: Record<string, JaarplanActie[]> = {};
+        await Promise.all(onderdelen.map(async (ond) => {
+          actiesByOnderdeel[ond.id] = await fetchJson<JaarplanActie[]>(`/api/jaarplan/onderdelen/${ond.id}/acties`);
+        }));
+        data[item.id] = {
+          onderdelen,
+          actiesByOnderdeel,
+          looseActies: acties.filter(a => !a.onderdeelId),
+        };
+      }));
+
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 40;
+      const maxWidth = pageWidth - margin * 2;
+      let y = margin;
+
+      const ensureSpace = (needed: number) => {
+        if (y + needed > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      };
+
+      const writeWrapped = (text: string, x: number, size: number, style: "normal" | "bold" | "italic" = "normal", color: [number, number, number] = [0, 0, 0]) => {
+        doc.setFont("helvetica", style);
+        doc.setFontSize(size);
+        doc.setTextColor(color[0], color[1], color[2]);
+        const lines = doc.splitTextToSize(text || "", maxWidth - (x - margin));
+        const lineHeight = size * 1.25;
+        ensureSpace(lines.length * lineHeight);
+        doc.text(lines, x, y);
+        y += lines.length * lineHeight;
+      };
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Jaarplan ${selectedYear}`, pageWidth / 2, y, { align: "center" });
+      y += 22;
+      if (adminAfdeling !== "__all__" && isAdmin) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(90, 90, 90);
+        doc.text(`Afdeling: ${adminAfdeling}`, pageWidth / 2, y, { align: "center" });
+        y += 16;
+      }
+      y += 8;
+
+      const sortedDepts = Object.entries(groupedByAfdeling).sort(([a], [b]) => a.localeCompare(b));
+      sortedDepts.forEach(([afdeling, afdelingItems], deptIdx) => {
+        if (deptIdx > 0) y += 10;
+        ensureSpace(28);
+        doc.setDrawColor(50, 50, 50);
+        doc.setLineWidth(1.2);
+        doc.line(margin, y + 14, pageWidth - margin, y + 14);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(0, 0, 0);
+        doc.text(afdeling, margin, y + 10);
+        y += 22;
+
+        afdelingItems.forEach((item) => {
+          const itemData = data[item.id];
+          const statusOpt = statusOptions.find(s => s.value === item.status) || statusOptions[0];
+          const allActies = [
+            ...(itemData?.looseActies || []),
+            ...Object.values(itemData?.actiesByOnderdeel || {}).flat(),
+          ];
+          const afgerond = allActies.filter(a => a.status === "afgerond").length;
+          const totaal = allActies.length;
+
+          y += 4;
+          ensureSpace(40);
+          writeWrapped(`${item.afspraken}  [${statusOpt.label}]`, margin + 8, 11, "bold");
+
+          const metaParts: string[] = [];
+          if (item.startDatum) metaParts.push(`Start: ${formatDate(item.startDatum)}`);
+          if (item.eindDatum) metaParts.push(`Einde: ${formatDate(item.eindDatum)}`);
+          if (totaal > 0) metaParts.push(`${afgerond}/${totaal} acties afgerond`);
+          if (metaParts.length > 0) {
+            writeWrapped(metaParts.join("   "), margin + 8, 9, "normal", [110, 110, 110]);
+          }
+
+          if (itemData) {
+            itemData.onderdelen.forEach((ond) => {
+              y += 2;
+              writeWrapped(`> ${ond.naam}`, margin + 16, 10, "bold", [60, 60, 60]);
+              const ondActies = itemData.actiesByOnderdeel[ond.id] || [];
+              if (ondActies.length === 0) {
+                writeWrapped("Geen acties", margin + 32, 9, "italic", [150, 150, 150]);
+              } else {
+                ondActies.forEach((actie) => {
+                  const aStatusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+                  writeWrapped(`${formatDate(actie.datum)}   ${actie.actie}   - ${aStatusOpt.label}`, margin + 32, 9, "normal", [60, 60, 60]);
+                });
+              }
+            });
+
+            if (itemData.looseActies.length > 0) {
+              y += 2;
+              if (itemData.onderdelen.length > 0) {
+                writeWrapped("Overige acties", margin + 16, 10, "bold", [60, 60, 60]);
+              }
+              itemData.looseActies.forEach((actie) => {
+                const aStatusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+                writeWrapped(`${formatDate(actie.datum)}   ${actie.actie}   - ${aStatusOpt.label}`, margin + 32, 9, "normal", [60, 60, 60]);
+              });
+            }
+
+            if (itemData.onderdelen.length === 0 && itemData.looseActies.length === 0) {
+              writeWrapped("Geen activiteiten geregistreerd", margin + 16, 9, "italic", [150, 150, 150]);
+            }
+          }
+          y += 6;
+        });
+      });
+
+      const fileSuffix = isAdmin && adminAfdeling !== "__all__" ? `-${adminAfdeling}` : "";
+      doc.save(`jaarplan-${selectedYear}${fileSuffix}.pdf`);
+    } catch {
+      toast({ title: "PDF maken mislukt", variant: "destructive" });
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
   const handlePrint = async () => {
     setIsPrintLoading(true);
     try {
@@ -2610,6 +2753,12 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
             <Button variant="outline" onClick={handlePrint} disabled={isPrintLoading} data-testid="button-print-jaarplan">
               <Printer className="h-4 w-4 mr-2" />
               {isPrintLoading ? "Laden..." : "Afdrukken"}
+            </Button>
+          )}
+          {items.length > 0 && (
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={isPdfLoading} data-testid="button-download-pdf-jaarplan">
+              <Download className="h-4 w-4 mr-2" />
+              {isPdfLoading ? "Laden..." : "Download PDF"}
             </Button>
           )}
         </div>
