@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -2376,6 +2376,14 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
   const [editingItem, setEditingItem] = useState<JaarplanItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [adminAfdeling, setAdminAfdeling] = useState("__all__");
+  const [progressFilter, setProgressFilter] = useState<"all" | "incomplete" | "complete">(() => {
+    if (typeof window === "undefined") return "all";
+    const saved = window.sessionStorage.getItem("jaarplanProgressFilter");
+    return saved === "incomplete" || saved === "complete" || saved === "all" ? saved : "all";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") window.sessionStorage.setItem("jaarplanProgressFilter", progressFilter);
+  }, [progressFilter]);
   const [formData, setFormData] = useState({
     afspraken: "",
     startDatum: "",
@@ -2466,7 +2474,28 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     });
   };
 
-  const groupedByAfdeling = items.reduce((acc, item) => {
+  const actiesQueries = useQueries({
+    queries: items.map(item => ({
+      queryKey: ["/api/jaarplan", item.id, "acties"],
+      queryFn: async () => {
+        const res = await fetch(`/api/jaarplan/${item.id}/acties`, { credentials: "include" });
+        if (!res.ok) throw new Error("Ophalen mislukt");
+        return res.json() as Promise<JaarplanActie[]>;
+      },
+    })),
+  });
+
+  const filteredItems = items.filter((_item, idx) => {
+    if (progressFilter === "all") return true;
+    const q = actiesQueries[idx];
+    const acties = q?.data as JaarplanActie[] | undefined;
+    if (acties === undefined) return true;
+    if (acties.length === 0) return progressFilter === "incomplete";
+    const allDone = acties.every(a => a.status === "afgerond");
+    return progressFilter === "complete" ? allDone : !allDone;
+  });
+
+  const groupedByAfdeling = filteredItems.reduce((acc, item) => {
     const dept = item.afdeling || "Onbekend";
     if (!acc[dept]) acc[dept] = [];
     acc[dept].push(item);
@@ -2527,6 +2556,16 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
           </Button>
         </div>
         <div className="flex items-center gap-2">
+          <Select value={progressFilter} onValueChange={(v) => setProgressFilter(v as "all" | "incomplete" | "complete")}>
+            <SelectTrigger className="w-48 h-8 text-sm" data-testid="select-jaarplan-progress-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" data-testid="filter-progress-all">Alle plannen</SelectItem>
+              <SelectItem value="incomplete" data-testid="filter-progress-incomplete">Niet volledig afgerond</SelectItem>
+              <SelectItem value="complete" data-testid="filter-progress-complete">Volledig afgerond</SelectItem>
+            </SelectContent>
+          </Select>
           {isAdmin && (
             <Select value={adminAfdeling} onValueChange={setAdminAfdeling}>
               <SelectTrigger className="w-44 h-8 text-sm" data-testid="select-jaarplan-admin-afdeling">
@@ -2639,6 +2678,18 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
                   Voeg een plan toe
                 </Button>
               )}
+            </CardContent>
+          </Card>
+        ) : filteredItems.length === 0 ? (
+          <Card className="border border-dashed">
+            <CardContent className="p-8 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground" data-testid="text-jaarplan-filter-empty">
+                Geen plannen die voldoen aan het gekozen filter
+              </p>
+              <Button variant="link" onClick={() => setProgressFilter("all")} className="mt-2" data-testid="button-clear-progress-filter">
+                Toon alle plannen
+              </Button>
             </CardContent>
           </Card>
         ) : (
