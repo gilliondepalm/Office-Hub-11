@@ -34,11 +34,24 @@ interface Announcement {
   createdAt?: string;
 }
 
-interface AbsenceToday {
-  id: number;
-  userName?: string;
-  type?: string;
-  reason?: string;
+interface AbsenceTodayEmployee {
+  name: string;
+  type: string;
+  status: string;
+  halfDay: string | null;
+}
+
+interface AbsenceTodayDepartment {
+  managerName: string;
+  managerRole: string;
+  department: string;
+  employees: AbsenceTodayEmployee[];
+}
+
+interface AbsenceTodayResponse {
+  date: string;
+  totalAbsent: number;
+  departments: AbsenceTodayDepartment[];
 }
 
 export default function DashboardScreen() {
@@ -57,7 +70,7 @@ export default function DashboardScreen() {
 
   const today = useQuery({
     queryKey: ["absences-today"],
-    queryFn: () => apiJson<AbsenceToday[]>("/api/absences/today"),
+    queryFn: () => apiJson<AbsenceTodayResponse>("/api/absences/today"),
   });
 
   const refreshing =
@@ -164,47 +177,63 @@ export default function DashboardScreen() {
       <Section title="Vandaag afwezig">
         {today.isLoading ? (
           <ActivityIndicator color={colors.primary} />
-        ) : !today.data?.length ? (
+        ) : !today.data?.totalAbsent ? (
           <EmptyState text="Niemand is vandaag afwezig" />
         ) : (
-          today.data.map((t) => (
-            <Card
-              key={t.id}
-              style={{ marginBottom: 8, flexDirection: "row", gap: 10 }}
-            >
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: colors.accent,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+          today.data.departments.flatMap((dept) =>
+            dept.employees.map((emp, idx) => (
+              <Card
+                key={`${dept.department}-${emp.name}-${idx}`}
+                style={{ marginBottom: 8, flexDirection: "row", gap: 10 }}
               >
-                <Feather
-                  name="user"
-                  size={16}
-                  color={colors.accentForeground}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[styles.cardTitle, { color: colors.foreground }]}
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: colors.accent,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
-                  {t.userName || "Medewerker"}
-                </Text>
-                <Text
-                  style={[
-                    styles.cardBody,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {t.type || t.reason || "Afwezig"}
-                </Text>
-              </View>
-            </Card>
-          ))
+                  <Feather
+                    name="user"
+                    size={16}
+                    color={colors.accentForeground}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 6,
+                    }}
+                  >
+                    <Text
+                      style={[styles.cardTitle, { color: colors.foreground }]}
+                      testID={`text-absent-name-${idx}`}
+                    >
+                      {emp.name || "Medewerker"}
+                    </Text>
+                    {emp.halfDay === "am" || emp.halfDay === "pm" ? (
+                      <HalfDayBadge part={emp.halfDay} />
+                    ) : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.cardBody,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {emp.type || "Afwezig"}
+                    {dept.department ? ` · ${dept.department}` : ""}
+                  </Text>
+                </View>
+              </Card>
+            ))
+          )
         )}
       </Section>
     </ScrollView>
@@ -276,6 +305,34 @@ function Section({
         {title}
       </Text>
       {children}
+    </View>
+  );
+}
+
+function HalfDayBadge({ part }: { part: "am" | "pm" }) {
+  const colors = useColors();
+  const label = part === "am" ? "Ochtend" : "Middag";
+  return (
+    <View
+      style={{
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.card,
+      }}
+      testID={`badge-halfday-${part}`}
+    >
+      <Text
+        style={{
+          color: colors.mutedForeground,
+          fontSize: 11,
+          fontFamily: "Inter_500Medium",
+        }}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
