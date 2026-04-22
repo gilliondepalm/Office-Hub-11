@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueries } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -2485,6 +2485,27 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     })),
   });
 
+  const overviewStats = useMemo(() => {
+    let total = 0;
+    let done = 0;
+    const byDept: Record<string, { total: number; done: number; plans: number }> = {};
+    items.forEach((item, idx) => {
+      const dept = item.afdeling || "Onbekend";
+      if (!byDept[dept]) byDept[dept] = { total: 0, done: 0, plans: 0 };
+      byDept[dept].plans += 1;
+      const acties = actiesQueries[idx]?.data as JaarplanActie[] | undefined;
+      if (!acties) return;
+      total += acties.length;
+      byDept[dept].total += acties.length;
+      const d = acties.filter(a => a.status === "afgerond").length;
+      done += d;
+      byDept[dept].done += d;
+    });
+    const allLoaded = actiesQueries.every(q => q.data !== undefined);
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    return { total, done, pct, byDept, allLoaded, plans: items.length };
+  }, [items, actiesQueries]);
+
   const filteredItems = items.filter((_item, idx) => {
     if (progressFilter === "all") return true;
     const q = actiesQueries[idx];
@@ -2593,6 +2614,59 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
           )}
         </div>
       </div>
+
+      {items.length > 0 && (
+        <Card className="border border-border/60 print:hidden" data-testid="card-jaarplan-overview">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <h4 className="text-sm font-semibold">Totaaloverzicht voortgang {selectedYear}</h4>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span data-testid="text-overview-plans"><span className="font-semibold text-foreground">{overviewStats.plans}</span> plannen</span>
+                <span data-testid="text-overview-total"><span className="font-semibold text-foreground">{overviewStats.total}</span> acties</span>
+                <span data-testid="text-overview-done"><span className="font-semibold text-foreground">{overviewStats.done}</span> afgerond</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Organisatiebreed</span>
+                <span className="font-semibold" data-testid="text-overview-pct">{overviewStats.allLoaded ? `${overviewStats.pct}%` : "…"}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${overviewStats.allLoaded ? overviewStats.pct : 0}%` }}
+                  data-testid="progress-overview-bar"
+                />
+              </div>
+            </div>
+            {Object.keys(overviewStats.byDept).length > 1 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                {Object.entries(overviewStats.byDept)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([dept, s]) => {
+                    const dpct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0;
+                    return (
+                      <div key={dept} className="space-y-1" data-testid={`overview-dept-${dept}`}>
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <span className="truncate">{dept}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {s.done}/{s.total} ({dpct}%)
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-primary/70" style={{ width: `${dpct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {showForm && canEdit && (
         <Card className="border border-border/60 print:hidden">
