@@ -1392,7 +1392,7 @@ export async function registerRoutes(
         return days;
       };
 
-      const results: { userId: string; userName: string; oudSaldo: number; nieuwSaldo: number }[] = [];
+      const results: { userId: string; userName: string; oudSaldo: number; nieuwSaldo: number; resterendOnafgerond: number }[] = [];
 
       for (const u of allUsers.filter(u => u.active)) {
         const approved = allAbsences.filter(a =>
@@ -1424,7 +1424,7 @@ export async function registerRoutes(
         const resterend      = totaal - gebruiktDagen - snipperdagenCount;
         const nieuwSaldo     = Math.max(0, Math.round(resterend * 2) / 2);
 
-        results.push({ userId: u.id, userName: u.fullName, oudSaldo: saldoOud, nieuwSaldo });
+        results.push({ userId: u.id, userName: u.fullName, oudSaldo: saldoOud, nieuwSaldo, resterendOnafgerond: resterend });
       }
 
       res.json({ closingYear, results });

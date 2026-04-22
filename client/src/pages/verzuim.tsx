@@ -1407,7 +1407,7 @@ export default function VerzuimPage() {
   const previewYear = new Date().getFullYear() - 1;
   const { data: jaarAfsluitenPreview, isLoading: previewLoading } = useQuery<{
     closingYear: number;
-    results: { userId: string; userName: string; oudSaldo: number; nieuwSaldo: number }[];
+    results: { userId: string; userName: string; oudSaldo: number; nieuwSaldo: number; resterendOnafgerond: number }[];
   }>({
     queryKey: ["/api/vacation/jaar-afsluiten-preview", previewYear],
     queryFn: async () => {
@@ -1796,13 +1796,34 @@ export default function VerzuimPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/50">
-                            {jaarAfsluitenPreview.results.map(r => (
-                              <tr key={r.userId} data-testid={`preview-row-${r.userId}`}>
-                                <td className="py-1">{r.userName}</td>
-                                <td className="text-right py-1 text-muted-foreground">{r.oudSaldo}</td>
-                                <td className="text-right py-1 font-semibold">{r.nieuwSaldo}</td>
-                              </tr>
-                            ))}
+                            {jaarAfsluitenPreview.results.map(r => {
+                              const isNegatief = r.resterendOnafgerond < 0;
+                              return (
+                                <tr
+                                  key={r.userId}
+                                  data-testid={`preview-row-${r.userId}`}
+                                  className={isNegatief ? "bg-red-50 dark:bg-red-950/30" : undefined}
+                                >
+                                  <td className={`py-1 ${isNegatief ? "text-red-700 dark:text-red-400 font-medium" : ""}`}>
+                                    {r.userName}
+                                    {isNegatief && (
+                                      <span className="ml-1.5 inline-flex items-center rounded-sm bg-red-100 dark:bg-red-900/50 px-1 py-0.5 text-[10px] font-semibold text-red-700 dark:text-red-400">
+                                        negatief saldo
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="text-right py-1 text-muted-foreground">{r.oudSaldo}</td>
+                                  <td className={`text-right py-1 font-semibold ${isNegatief ? "text-red-700 dark:text-red-400" : ""}`}>
+                                    {r.nieuwSaldo}
+                                    {isNegatief && (
+                                      <span className="ml-1 text-[10px] font-normal text-red-500 dark:text-red-400">
+                                        ({r.resterendOnafgerond.toFixed(1)})
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
