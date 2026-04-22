@@ -122,6 +122,10 @@ export default function DashboardScreen() {
         </View>
       </ImageBackground>
 
+      <Section title="Kalender">
+        <MiniCalendar />
+      </Section>
+
       <Section title="Aankondigingen">
         {announcements.isLoading ? (
           <ActivityIndicator color={colors.primary} />
@@ -146,10 +150,6 @@ export default function DashboardScreen() {
             </Card>
           ))
         )}
-      </Section>
-
-      <Section title="Kalender">
-        <MiniCalendar />
       </Section>
 
       <Section
