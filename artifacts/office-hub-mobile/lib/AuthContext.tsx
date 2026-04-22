@@ -16,6 +16,7 @@ export interface User {
   department?: string | null;
   jobTitle?: string | null;
   functie?: string | null;
+  kadasterId?: string | null;
   avatarUrl?: string | null;
   vacationDays?: number | null;
   vacationDaysUsed?: number | null;
