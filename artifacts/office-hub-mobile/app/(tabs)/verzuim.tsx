@@ -34,6 +34,7 @@ interface Absence {
   type?: string;
   reason?: string;
   status?: string;
+  halfDay?: string | null;
 }
 
 interface VacationBalance {
@@ -261,7 +262,12 @@ export default function VerzuimScreen() {
                       marginTop: 2,
                     }}
                   >
-                    {formatDate(a.startDate)} – {formatDate(a.endDate)}
+                    {formatDate(a.startDate)}
+                    {a.halfDay === "am" || a.halfDay === "pm"
+                      ? ` (${a.halfDay === "am" ? "Ochtend" : "Middag"})`
+                      : a.endDate && a.endDate !== a.startDate
+                        ? ` – ${formatDate(a.endDate)}`
+                        : ""}
                   </Text>
                   {a.reason ? (
                     <Text
@@ -306,6 +312,8 @@ function NewAbsenceModal({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
+  const [isHalfDay, setIsHalfDay] = useState(false);
+  const [halfDayPart, setHalfDayPart] = useState<"am" | "pm">("am");
   const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
@@ -313,6 +321,8 @@ function NewAbsenceModal({
     setStartDate("");
     setEndDate("");
     setReason("");
+    setIsHalfDay(false);
+    setHalfDayPart("am");
     setError(null);
   };
 
@@ -322,12 +332,17 @@ function NewAbsenceModal({
   };
 
   const validation = useMemo(() => {
+    if (isHalfDay) {
+      if (!startDate) return "Kies een datum";
+      if (!isValidDate(startDate)) return "De datum is ongeldig";
+      return null;
+    }
     if (!startDate || !endDate) return "Kies een start- en einddatum";
     if (!isValidDate(startDate) || !isValidDate(endDate))
       return "Een van de datums is ongeldig";
     if (endDate < startDate) return "Einddatum mag niet voor startdatum liggen";
     return null;
-  }, [startDate, endDate]);
+  }, [startDate, endDate, isHalfDay]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -338,8 +353,8 @@ function NewAbsenceModal({
           userId,
           type,
           startDate,
-          endDate,
-          halfDay: null,
+          endDate: isHalfDay ? startDate : endDate,
+          halfDay: isHalfDay ? halfDayPart : null,
           status: "pending",
           reason: reason.trim() || null,
           bvvdReason: null,
@@ -441,20 +456,106 @@ function NewAbsenceModal({
               })}
             </View>
 
-            <Label text="Startdatum" />
+            <Label text={isHalfDay ? "Datum" : "Startdatum"} />
             <DateField
               value={startDate}
               onChange={setStartDate}
               testID="input-start-date"
             />
 
-            <Label text="Einddatum" />
-            <DateField
-              value={endDate}
-              onChange={setEndDate}
-              minimumDate={startDate}
-              testID="input-end-date"
-            />
+            {isHalfDay ? null : (
+              <>
+                <Label text="Einddatum" />
+                <DateField
+                  value={endDate}
+                  onChange={setEndDate}
+                  minimumDate={startDate}
+                  testID="input-end-date"
+                />
+              </>
+            )}
+
+            <Label text="Duur" />
+            <View style={styles.typeRow}>
+              {[
+                { value: "full", label: "Hele dag(en)" },
+                { value: "half", label: "Halve dag" },
+              ].map((opt) => {
+                const selected =
+                  (opt.value === "half" && isHalfDay) ||
+                  (opt.value === "full" && !isHalfDay);
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setIsHalfDay(opt.value === "half")}
+                    style={[
+                      styles.typeChip,
+                      {
+                        backgroundColor: selected ? colors.primary : colors.card,
+                        borderColor: selected ? colors.primary : colors.border,
+                      },
+                    ]}
+                    testID={`chip-duration-${opt.value}`}
+                  >
+                    <Text
+                      style={{
+                        color: selected
+                          ? colors.primaryForeground
+                          : colors.foreground,
+                        fontFamily: "Inter_500Medium",
+                        fontSize: 13,
+                      }}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {isHalfDay ? (
+              <>
+                <Label text="Dagdeel" />
+                <View style={styles.typeRow}>
+                  {[
+                    { value: "am" as const, label: "Ochtend" },
+                    { value: "pm" as const, label: "Middag" },
+                  ].map((opt) => {
+                    const selected = halfDayPart === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setHalfDayPart(opt.value)}
+                        style={[
+                          styles.typeChip,
+                          {
+                            backgroundColor: selected
+                              ? colors.primary
+                              : colors.card,
+                            borderColor: selected
+                              ? colors.primary
+                              : colors.border,
+                          },
+                        ]}
+                        testID={`chip-halfday-${opt.value}`}
+                      >
+                        <Text
+                          style={{
+                            color: selected
+                              ? colors.primaryForeground
+                              : colors.foreground,
+                            fontFamily: "Inter_500Medium",
+                            fontSize: 13,
+                          }}
+                        >
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
             <Label text="Reden (optioneel)" />
             <TextInput
