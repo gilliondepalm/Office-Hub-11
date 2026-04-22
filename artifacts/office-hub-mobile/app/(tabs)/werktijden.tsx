@@ -414,6 +414,40 @@ function DateField({
 }) {
   const colors = useColors();
   const [show, setShow] = useState(false);
+
+  if (Platform.OS === "web") {
+    return (
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
+          {label}
+        </Text>
+        <View
+          style={[
+            styles.dateBtn,
+            { borderColor: colors.border, backgroundColor: colors.card },
+          ]}
+        >
+          <Feather name="calendar" size={14} color={colors.mutedForeground} />
+          {React.createElement("input" as any, {
+            type: "date",
+            value: value,
+            onChange: (e: any) => onChange(e.target.value),
+            style: {
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              color: colors.foreground,
+              fontSize: 13,
+              fontFamily: "Inter_400Regular",
+              flex: 1,
+              padding: 0,
+            },
+          })}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>
