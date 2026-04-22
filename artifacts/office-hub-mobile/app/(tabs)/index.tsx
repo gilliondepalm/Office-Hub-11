@@ -174,66 +174,146 @@ export default function DashboardScreen() {
         )}
       </Section>
 
-      <Section title="Vandaag afwezig">
+      <Section
+        title="Vandaag afwezig"
+        right={
+          today.data && today.data.totalAbsent > 0 ? (
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: colors.accent,
+              }}
+              testID="badge-absent-total"
+            >
+              <Text
+                style={{
+                  color: colors.accentForeground,
+                  fontSize: 12,
+                  fontFamily: "Inter_600SemiBold",
+                }}
+              >
+                {today.data.totalAbsent} totaal
+              </Text>
+            </View>
+          ) : null
+        }
+      >
         {today.isLoading ? (
           <ActivityIndicator color={colors.primary} />
         ) : !today.data?.totalAbsent ? (
           <EmptyState text="Niemand is vandaag afwezig" />
         ) : (
-          today.data.departments.flatMap((dept) =>
-            dept.employees.map((emp, idx) => (
-              <Card
-                key={`${dept.department}-${emp.name}-${idx}`}
-                style={{ marginBottom: 8, flexDirection: "row", gap: 10 }}
+          today.data.departments.map((dept) => {
+            const roleLabels: Record<string, string> = {
+              admin: "Beheerder",
+              manager: "Manager",
+              directeur: "Directeur",
+            };
+            const managerSuffix = dept.managerRole
+              ? ` (${roleLabels[dept.managerRole] || dept.managerRole})`
+              : "";
+            return (
+              <View
+                key={dept.department}
+                style={{ marginBottom: 12 }}
+                testID={`dept-absence-${dept.department}`}
               >
                 <View
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: colors.accent,
+                    flexDirection: "row",
                     alignItems: "center",
-                    justifyContent: "center",
+                    gap: 6,
+                    marginBottom: 6,
+                    paddingHorizontal: 2,
                   }}
                 >
                   <Feather
-                    name="user"
-                    size={16}
-                    color={colors.accentForeground}
+                    name="briefcase"
+                    size={13}
+                    color={colors.mutedForeground}
                   />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View
+                  <Text
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: 6,
+                      color: colors.foreground,
+                      fontFamily: "Inter_600SemiBold",
+                      fontSize: 13,
                     }}
                   >
-                    <Text
-                      style={[styles.cardTitle, { color: colors.foreground }]}
-                      testID={`text-absent-name-${idx}`}
-                    >
-                      {emp.name || "Medewerker"}
-                    </Text>
-                    {emp.halfDay === "am" || emp.halfDay === "pm" ? (
-                      <HalfDayBadge part={emp.halfDay} />
-                    ) : null}
-                  </View>
-                  <Text
-                    style={[
-                      styles.cardBody,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {emp.type || "Afwezig"}
-                    {dept.department ? ` · ${dept.department}` : ""}
+                    {dept.department}
                   </Text>
+                  {dept.managerName ? (
+                    <Text
+                      style={{
+                        color: colors.mutedForeground,
+                        fontSize: 12,
+                        flexShrink: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      — {dept.managerName}
+                      {managerSuffix}
+                    </Text>
+                  ) : null}
                 </View>
-              </Card>
-            ))
-          )
+                {dept.employees.map((emp, idx) => (
+                  <Card
+                    key={`${dept.department}-${emp.name}-${idx}`}
+                    style={{ marginBottom: 6, flexDirection: "row", gap: 10 }}
+                  >
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: colors.accent,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Feather
+                        name="user"
+                        size={16}
+                        color={colors.accentForeground}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: 6,
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.cardTitle,
+                            { color: colors.foreground },
+                          ]}
+                          testID={`text-absent-name-${idx}`}
+                        >
+                          {emp.name || "Medewerker"}
+                        </Text>
+                        {emp.halfDay === "am" || emp.halfDay === "pm" ? (
+                          <HalfDayBadge part={emp.halfDay} />
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[
+                          styles.cardBody,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {emp.type || "Afwezig"}
+                      </Text>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            );
+          })
         )}
       </Section>
     </ScrollView>
@@ -287,23 +367,35 @@ function StatCard({
 function Section({
   title,
   children,
+  right,
 }: {
   title: string;
   children: React.ReactNode;
+  right?: React.ReactNode;
 }) {
   const colors = useColors();
   return (
     <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
-      <Text
+      <View
         style={{
-          color: colors.foreground,
-          fontFamily: "Inter_600SemiBold",
-          fontSize: 15,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
           marginBottom: 8,
         }}
       >
-        {title}
-      </Text>
+        <Text
+          style={{
+            color: colors.foreground,
+            fontFamily: "Inter_600SemiBold",
+            fontSize: 15,
+          }}
+        >
+          {title}
+        </Text>
+        {right}
+      </View>
       {children}
     </View>
   );
