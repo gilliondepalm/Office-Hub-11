@@ -1,4 +1,7 @@
 import { Feather } from "@expo/vector-icons";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo, useState } from "react";
@@ -48,8 +51,23 @@ const ABSENCE_TYPES: { value: string; label: string }[] = [
   { value: "other", label: "Overig" },
 ];
 
+function parseYMDLocal(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function formatDate(d: string) {
   if (!d) return "—";
+  const local = parseYMDLocal(d);
+  if (local) {
+    return local.toLocaleDateString("nl-NL", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
   try {
     return new Date(d).toLocaleDateString("nl-NL", {
       day: "2-digit",
@@ -62,7 +80,7 @@ function formatDate(d: string) {
 }
 
 function isValidDate(s: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + "T00:00:00").getTime());
+  return parseYMDLocal(s) !== null;
 }
 
 function toDutchError(err: unknown): string {
@@ -304,9 +322,9 @@ function NewAbsenceModal({
   };
 
   const validation = useMemo(() => {
-    if (!startDate || !endDate) return "Vul start- en einddatum in";
+    if (!startDate || !endDate) return "Kies een start- en einddatum";
     if (!isValidDate(startDate) || !isValidDate(endDate))
-      return "Gebruik datumformaat JJJJ-MM-DD";
+      return "Een van de datums is ongeldig";
     if (endDate < startDate) return "Einddatum mag niet voor startdatum liggen";
     return null;
   }, [startDate, endDate]);
@@ -424,42 +442,17 @@ function NewAbsenceModal({
             </View>
 
             <Label text="Startdatum" />
-            <TextInput
+            <DateField
               value={startDate}
-              onChangeText={setStartDate}
-              placeholder="JJJJ-MM-DD"
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType={Platform.OS === "ios" ? "numbers-and-punctuation" : "default"}
-              style={[
-                styles.input,
-                {
-                  color: colors.foreground,
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                },
-              ]}
+              onChange={setStartDate}
               testID="input-start-date"
             />
 
             <Label text="Einddatum" />
-            <TextInput
+            <DateField
               value={endDate}
-              onChangeText={setEndDate}
-              placeholder="JJJJ-MM-DD"
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType={Platform.OS === "ios" ? "numbers-and-punctuation" : "default"}
-              style={[
-                styles.input,
-                {
-                  color: colors.foreground,
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                },
-              ]}
+              onChange={setEndDate}
+              minimumDate={startDate}
               testID="input-end-date"
             />
 
@@ -558,6 +551,152 @@ function NewAbsenceModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+function formatYMD(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function DateField({
+  value,
+  onChange,
+  minimumDate,
+  testID,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  minimumDate?: string;
+  testID?: string;
+}) {
+  const colors = useColors();
+  const [showPicker, setShowPicker] = useState(false);
+
+  if (Platform.OS === "web") {
+    const WebInput = "input" as unknown as React.ComponentType<Record<string, unknown>>;
+    return (
+      <WebInput
+        type="date"
+        value={value}
+        min={minimumDate || undefined}
+        onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
+        data-testid={testID}
+        style={{
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.card,
+          color: colors.foreground,
+          borderRadius: 10,
+          padding: 10,
+          fontSize: 14,
+          fontFamily: "Inter_400Regular",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      />
+    );
+  }
+
+  const dateValue =
+    parseYMDLocal(value) ??
+    (minimumDate ? parseYMDLocal(minimumDate) : null) ??
+    new Date();
+  const minDate = minimumDate ? parseYMDLocal(minimumDate) ?? undefined : undefined;
+
+  const handleChange = (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS !== "ios") {
+      setShowPicker(false);
+    }
+    if (event.type === "set" && selected) {
+      onChange(formatYMD(selected));
+    }
+  };
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setShowPicker(true)}
+        style={[
+          styles.input,
+          {
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            justifyContent: "center",
+          },
+        ]}
+        testID={testID}
+      >
+        <Text
+          style={{
+            color: value ? colors.foreground : colors.mutedForeground,
+            fontSize: 14,
+            fontFamily: "Inter_400Regular",
+          }}
+        >
+          {value ? formatDate(value) : "Kies datum"}
+        </Text>
+      </Pressable>
+      {showPicker ? (
+        Platform.OS === "ios" ? (
+          <Modal transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
+            <Pressable
+              style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
+              onPress={() => setShowPicker(false)}
+            >
+              <Pressable
+                onPress={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: colors.background,
+                  borderTopLeftRadius: 18,
+                  borderTopRightRadius: 18,
+                  padding: 12,
+                }}
+              >
+                <DateTimePicker
+                  value={dateValue}
+                  mode="date"
+                  display="inline"
+                  minimumDate={minDate}
+                  onChange={handleChange}
+                />
+                <Pressable
+                  onPress={() => setShowPicker(false)}
+                  style={{
+                    backgroundColor: colors.primary,
+                    borderRadius: 10,
+                    paddingVertical: 12,
+                    alignItems: "center",
+                    marginTop: 8,
+                  }}
+                  testID={`${testID}-done`}
+                >
+                  <Text
+                    style={{
+                      color: colors.primaryForeground,
+                      fontFamily: "Inter_600SemiBold",
+                      fontSize: 14,
+                    }}
+                  >
+                    Klaar
+                  </Text>
+                </Pressable>
+              </Pressable>
+            </Pressable>
+          </Modal>
+        ) : (
+          <DateTimePicker
+            value={dateValue}
+            mode="date"
+            display="default"
+            minimumDate={minDate}
+            onChange={handleChange}
+          />
+        )
+      ) : null}
+    </>
   );
 }
 
