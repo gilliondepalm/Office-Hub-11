@@ -38,8 +38,11 @@ interface Absence {
 }
 
 interface VacationBalance {
+  userId: number;
   totalDays?: number;
-  usedDays?: number;
+  toegekendDays?: number;
+  geplandDays?: number;
+  opgenomenDays?: number;
   remainingDays?: number;
   saldoOud?: number;
 }
@@ -137,11 +140,13 @@ export default function VerzuimScreen() {
   const { user } = useAuth();
   const [formOpen, setFormOpen] = useState(false);
 
-  const balance = useQuery({
+  const balances = useQuery({
     queryKey: ["vacation-balance"],
-    queryFn: () =>
-      apiJson<VacationBalance>("/api/vacation-balance"),
+    queryFn: () => apiJson<VacationBalance[]>("/api/vacation-balance"),
   });
+  const myBalance = balances.data?.find((b) => b.userId === user?.id);
+  const usedDays =
+    (myBalance?.toegekendDays ?? 0) + (myBalance?.geplandDays ?? 0);
 
   const mine = useQuery({
     queryKey: ["absences-mine"],
@@ -169,20 +174,20 @@ export default function VerzuimScreen() {
 
       <View style={{ padding: 16 }}>
         <Card style={{ marginBottom: 16 }}>
-          {balance.isLoading ? (
+          {balances.isLoading ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
             <View style={styles.balanceRow}>
-              <BalanceCell label="Totaal" value={balance.data?.totalDays} />
-              <BalanceCell label="Gebruikt" value={balance.data?.usedDays} />
+              <BalanceCell label="Totaal" value={myBalance?.totalDays} />
+              <BalanceCell label="Gebruikt" value={usedDays} />
               <BalanceCell
                 label="Resterend"
-                value={balance.data?.remainingDays}
+                value={myBalance?.remainingDays}
                 highlight
               />
             </View>
           )}
-          {balance.data?.saldoOud != null && balance.data.saldoOud > 0 ? (
+          {myBalance?.saldoOud != null && myBalance.saldoOud > 0 ? (
             <Text
               style={{
                 color: colors.mutedForeground,
@@ -191,7 +196,7 @@ export default function VerzuimScreen() {
                 textAlign: "center",
               }}
             >
-              Saldo vorig jaar: {balance.data.saldoOud} dagen
+              Saldo vorig jaar: {myBalance.saldoOud} dagen
             </Text>
           ) : null}
         </Card>
