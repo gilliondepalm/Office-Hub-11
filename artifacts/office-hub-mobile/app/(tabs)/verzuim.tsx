@@ -173,13 +173,13 @@ export default function VerzuimScreen() {
             <ActivityIndicator color={colors.primary} />
           ) : (
             <View style={styles.balanceRow}>
+              <BalanceCell label="Totaal" value={balance.data?.totalDays} />
+              <BalanceCell label="Gebruikt" value={balance.data?.usedDays} />
               <BalanceCell
                 label="Resterend"
                 value={balance.data?.remainingDays}
                 highlight
               />
-              <BalanceCell label="Gebruikt" value={balance.data?.usedDays} />
-              <BalanceCell label="Totaal" value={balance.data?.totalDays} />
             </View>
           )}
           {balance.data?.saldoOud != null && balance.data.saldoOud > 0 ? (
