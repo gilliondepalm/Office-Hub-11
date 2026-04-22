@@ -43,6 +43,7 @@ interface VacationBalance {
   toegekendDays?: number;
   geplandDays?: number;
   opgenomenDays?: number;
+  sickDays?: number;
   remainingDays?: number;
   saldoOud?: number;
 }
@@ -145,8 +146,6 @@ export default function VerzuimScreen() {
     queryFn: () => apiJson<VacationBalance[]>("/api/vacation-balance"),
   });
   const myBalance = balances.data?.find((b) => b.userId === user?.id);
-  const usedDays =
-    (myBalance?.toegekendDays ?? 0) + (myBalance?.geplandDays ?? 0);
 
   const mine = useQuery({
     queryKey: ["absences-mine"],
@@ -179,7 +178,7 @@ export default function VerzuimScreen() {
           ) : (
             <View style={styles.balanceRow}>
               <BalanceCell label="Totaal" value={myBalance?.totalDays} />
-              <BalanceCell label="Gebruikt" value={usedDays} />
+              <BalanceCell label="Ziek" value={myBalance?.sickDays} />
               <BalanceCell
                 label="Resterend"
                 value={myBalance?.remainingDays}
