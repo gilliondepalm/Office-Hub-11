@@ -1,0 +1,129 @@
+2023;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;4;6;9;13;20;24;26;34;39;47;59;66
+;Digitale bestanden;1;2;3;5;11;15;17;18;1;23;24;24
+;Situatieschets A4/A3;292;551;908;1154;1493;1843;2134;2491;2833;3250;3612;3826
+;Regulier Meetbrief;92;193;322;457;573;687;847;997;1118;1258;1384;1500
+;Regulier Extractplan;47;125;173;214;254;318;363;443;488;545;586;613
+;Kadastrale Meetgegevens;3;9;17;24;30;33;35;46;55;64;73;79
+;Inzage KAD;0;0;0;2;3;3;3;4;4;5;5;6
+2022;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;1;3;9;10;19;24;32;38;45;49;52;53
+;Digitale bestanden;6;7;11;13;15;17;19;20;6;24;24;25
+;Situatieschets A4/A3;246;551;936;1187;1481;1768;2089;2438;2756;3053;3298;3479
+;Regulier Meetbrief;140;254;426;517;690;810;964;1094;1232;1355;1498;1595
+;Regulier Extractplan;79;118;195;236;311;362;406;457;509;571;619;648
+;Kadastrale Meetgegevens;2;6;20;22;33;39;48;53;56;57;64;67
+;Inzage KAD;0;0;0;0;1;3;3;3;3;3;3;3
+2021;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;3;6;7;9;17;21;22;29;35;43;45
+;Digitale bestanden;1;2;2;2;3;5;5;5;1;10;12;17
+;Situatieschets A4/A3;223;461;657;739;893;1172;1512;1808;2110;2425;2680;2923
+;Regulier Meetbrief;73;154;254;304;398;513;623;727;832;948;1069;1169
+;Regulier Extractplan;46;104;124;150;185;211;266;305;351;394;445;475
+;Kadastrale Meetgegevens;0;4;4;5;6;6;9;15;17;61;83;96
+;Inzage KAD;1;64;118;118;118;118;118;118;118;118;119;120
+2020;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;5;8;11;11;12;14;21;34;37;43;45;47
+;Digitale bestanden;1;1;1;1;2;6;8;9;1;15;19;19
+;Situatieschets A4/A3;243;499;675;678;753;901;1051;1279;1466;1668;1855;1997
+;Regulier Meetbrief;98;169;272;273;317;372;423;493;554;626;700;766
+;Regulier Extractplan;40;194;225;225;235;258;291;331;366;402;433;460
+;Kadastrale Meetgegevens;2;15;18;18;23;32;59;61;62;63;65;67
+;Inzage KAD;24;54;71;71;71;196;196;230;232;235;235;235
+2019;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;8;13;19;27;32;36;36;39;47;49;49
+;Digitale bestanden;0;1;4;6;8;9;9;14;0;16;17;18
+;Situatieschets A4/A3;307;571;864;1175;1453;1686;1956;2221;2455;2708;2953;3210
+;Regulier Meetbrief;94;168;271;356;438;545;630;706;792;908;1005;1074
+;Regulier Extractplan;42;79;131;166;223;289;330;377;422;462;490;510
+;Kadastrale Meetgegevens;5;6;12;12;13;13;19;21;23;27;30;32
+;Inzage KAD;35;67;98;142;181;209;224;282;321;359;386;421
+2018;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;7;7;11;13;13;13;17;21;25;32;35;35
+;Digitale bestanden;1;1;5;6;6;6;8;9;1;11;13;16
+;Situatieschets A4/A3;257;503;843;1066;1366;1677;1916;2213;2435;2687;2917;3089
+;Regulier Meetbrief;86;168;275;351;449;541;617;715;803;906;997;1053
+;Regulier Extractplan;34;76;101;131;189;220;261;308;344;383;406;429
+;Kadastrale Meetgegevens;4;5;7;11;17;18;21;27;28;29;30;32
+;Inzage KAD;44;73;95;122;156;185;210;243;261;296;330;358
+2017;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;11;19;21;22;22;27;31;40;45;53;60
+;Digitale bestanden;2;5;7;7;8;8;9;10;2;13;15;16
+;Situatieschets A4/A3;202;385;599;728;933;1204;1459;1718;1981;2230;2511;2702
+;Regulier Meetbrief;59;115;189;224;322;418;490;563;639;698;769;817
+;Regulier Extractplan;45;80;140;166;217;257;288;320;355;392;426;454
+;Kadastrale Meetgegevens;8;8;10;10;13;14;17;29;30;34;36;38
+;Inzage KAD;23;42;86;114;164;203;240;268;308;347;376;406
+2016;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;1;2;9;11;15;17;23;23;35;38;39;39
+;Digitale bestanden;4;6;9;9;9;11;12;13;4;19;20;20
+;Situatieschets A4/A3;161;327;530;722;913;1121;1331;1587;1804;2008;2204;2204
+;Regulier Meetbrief;60;150;232;312;379;462;525;597;668;717;777;777
+;Regulier Extractplan;16;52;102;148;183;235;280;326;372;395;416;416
+;Kadastrale Meetgegevens;5;8;14;20;20;21;26;33;33;35;40;40
+;Inzage KAD;26;78;107;215;245;301;349;397;425;458;484;484
+2015;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;4;13;18;25;29;37;39;52;56;64;68;68
+;Digitale bestanden;0;0;3;4;4;4;5;6;0;8;9;9
+;Situatieschets A4/A3;166;292;485;621;752;963;1159;1362;1501;1630;1788;1788
+;Regulier Meetbrief;60;130;198;255;288;347;404;477;555;622;718;718
+;Regulier Extractplan;23;41;67;110;134;169;193;216;245;281;307;307
+;Kadastrale Meetgegevens;3;8;13;13;13;15;23;23;26;26;26;26
+;Inzage KAD;73;135;160;198;248;290;302;331;390;430;495;495
+2014;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;8;12;17;20;23;27;32;35;40;40;42;43
+;Digitale bestanden;4;4;4;4;7;13;15;16;4;20;21;21
+;Situatieschets A4/A3;175;351;497;651;824;984;1144;1302;1450;1611;1790;1890
+;Regulier Meetbrief;58;129;180;223;269;321;396;434;491;555;632;688
+;Regulier Extractplan;27;46;81;100;131;159;196;213;264;287;307;328
+;Kadastrale Meetgegevens;5;10;11;19;23;23;24;29;32;33;43;45
+;Inzage KAD;6;13;24;34;44;57;94;123;157;185;213;230
+2013;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;2;6;6;6;9;9;9;13;15;23;26;26
+;Digitale bestanden;0;0;0;0;0;0;0;5;7;10;26;26
+;Situatieschets A4/A3;168;290;457;622;786;937;1095;1266;1412;1594;1746;1746
+;Regulier Meetbrief;52;96;176;268;355;414;463;519;585;636;689;689
+;Regulier Extractplan;28;61;95;120;154;182;206;242;285;324;349;349
+;Kadastrale Meetgegevens;4;6;13;14;18;20;22;23;27;28;31;31
+;Inzage KAD;24;40;57;74;79;95;115;122;135;149;157;157
+2012;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;5;7;7;8;8;1278;11;14;15;15;15
+;Digitale bestanden;3;12;15;16;16;16;18;20;22;22;22;22
+;Situatieschets A4/A3;182;333;524;664;852;1007;1144;1310;1454;1586;1711;1802
+;Regulier Meetbrief;56;120;199;243;316;387;445;516;567;606;656;679
+;Regulier Extractplan;22;51;81;103;127;146;166;195;221;241;265;289
+;Kadastrale Meetgegevens;3;5;8;8;9;12;12;13;15;17;20;22
+;Inzage KAD;19;40;63;76;101;121;141;154;172;184;201;223
+2011;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;5;10;12;14;17;18;18;18;21;22;22;24
+;Digitale bestanden;2;5;5;11;12;14;15;15;18;20;29;30
+;Situatieschets A4/A3;223;438;645;831;1036;1270;1470;1674;1873;2063;2226;2347
+;Regulier Meetbrief;59;113;179;236;294;363;417;464;532;588;640;682
+;Regulier Extractplan;27;50;72;106;164;192;223;258;304;333;355;377
+;Kadastrale Meetgegevens;1;3;5;6;7;13;15;16;18;20;22;26
+;Inzage KAD;39;61;100;127;160;178;205;236;268;287;304;317
+2010;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;7;12;13;17;19;20;22;24;27;29;31
+;Digitale bestanden;2;3;7;9;15;25;36;48;56;58;61;64
+;Situatieschets A4/A3;194;371;615;806;1019;1244;1443;2234;2529;2749;2930;3071
+;Regulier Meetbrief;47;105;168;223;275;332;383;431;493;537;537;623
+;Regulier Extractplan;19;61;116;133;193;237;266;293;315;361;390;411
+;Kadastrale Meetgegevens;3;7;8;9;13;15;20;25;31;32;38;43
+;Inzage KAD;36;85;118;157;195;238;257;268;294;317;343;85
+2009;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;5;6;10;10;10;10;10;10;10;10;10
+;Digitale bestanden;4;6;8;10;11;11;11;11;11;11;11;11
+;Situatieschets A4/A3;204;391;995;1176;1357;1357;1357;1357;1357;1357;1357;1357
+;Regulier Meetbrief;66;114;278;339;400;400;400;400;400;400;400;400
+;Regulier Extractplan;45;80;190;220;250;250;250;250;250;250;250;250
+;Kadastrale Meetgegevens;2;5;9;12;12;12;12;12;12;12;12;12
+;Inzage KAD;33;61;153;185;217;217;217;217;217;217;217;217
+2008;;Jan;t/m Feb;t/m Mrt;t/m Apr;t/m Mei;t/m Jun;t/m Jul;t/m Aug;t/m Sep;t/m Okt;t/m Nov;t/m Dec
+;Kadastrale Kaart Producten;3;4;10;16;19;19;19;19;19;19;19;19
+;Digitale bestanden;0;0;3;6;8;8;8;8;8;8;8;8
+;Situatieschets A4/A3;205;403;600;825;1035;1035;1035;1035;1035;1035;1035;1035
+;Regulier Meetbrief;61;106;162;238;295;295;295;295;295;295;295;295
+;Regulier Extractplan;40;63;100;139;178;178;178;178;178;178;178;178
+;Kadastrale Meetgegevens;4;8;9;14;17;17;17;17;17;17;17;17
+;Inzage KAD;38;90;149;192;236;236;236;236;236;236;236;236
+;;;;;;;;;;;;;
