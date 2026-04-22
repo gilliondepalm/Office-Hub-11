@@ -2945,8 +2945,9 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
       {printData && (
         <div className="hidden print:block print-jaarplan-layout">
           <div className="text-center mb-6">
-            <h1 className="text-xl font-bold">Jaarplan {selectedYear}</h1>
-            {adminAfdeling !== "__all__" && <p className="text-sm text-gray-600 mt-1">Afdeling: {adminAfdeling}</p>}
+            <h1 className="text-xl font-bold" data-testid="text-print-jaarplan-title">
+              Jaarplan {selectedYear}{adminAfdeling !== "__all__" ? ` — ${adminAfdeling}` : ""}
+            </h1>
           </div>
           {Object.entries(groupedByAfdeling).sort(([a], [b]) => a.localeCompare(b)).map(([afdeling, afdelingItems]) => (
             <div key={afdeling} className="mb-8 break-inside-avoid-page">
@@ -3031,6 +3032,9 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
               })}
             </div>
           ))}
+          <div className="mt-8 pt-3 border-t border-gray-400 text-xs text-gray-600 text-center" data-testid="text-print-jaarplan-footer">
+            Afgedrukt op: {new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}
+          </div>
         </div>
       )}
     </div>
