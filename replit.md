@@ -23,6 +23,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Preview path: `/`
 - Uses relative `/api/*` calls to the API server (proxied via reverse proxy)
 
+### Office Hub Mobile (`artifacts/office-hub-mobile/`) — port 22654
+- Expo (React Native) app mirroring the web app's branding (green #27865A, dark sidebar #213B2F, yellow #FACC14)
+- Tabs: Dashboard, Werktijden, Verzuim, Beloningen, Persoonlijk
+- Calls the same `/api/*` endpoints as the web app via `EXPO_PUBLIC_DOMAIN`
+- Session cookie persisted via `AsyncStorage` (manual `connect.sid` capture in `lib/api.ts`)
+- Brand assets in `assets/brand/` mirrored from api-server `uploads/App_pics/`
+
 ### API Server (`artifacts/api-server/`) — port 8080
 - Express 5 + Drizzle ORM + PostgreSQL
 - Routes: `src/routes/routes.ts` — 3927-line legacy `registerRoutes` function
