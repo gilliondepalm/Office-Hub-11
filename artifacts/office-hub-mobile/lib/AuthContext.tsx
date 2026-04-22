@@ -15,6 +15,7 @@ export interface User {
   role?: string | null;
   department?: string | null;
   jobTitle?: string | null;
+  functie?: string | null;
   avatarUrl?: string | null;
   vacationDays?: number | null;
   vacationDaysUsed?: number | null;

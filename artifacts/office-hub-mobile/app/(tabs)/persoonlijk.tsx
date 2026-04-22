@@ -45,7 +45,7 @@ export default function PersoonlijkScreen() {
             {user?.fullName || user?.username || "Medewerker"}
           </Text>
           <Text style={styles.role}>
-            {user?.jobTitle || user?.role || "Medewerker"}
+            {user?.functie || user?.jobTitle || "Medewerker"}
           </Text>
         </View>
       </ImageBackground>
@@ -58,9 +58,12 @@ export default function PersoonlijkScreen() {
             value={user?.username}
           />
           <Field icon="mail" label="E-mailadres" value={user?.email} />
-          <Field icon="briefcase" label="Functie" value={user?.jobTitle} />
-          <Field icon="grid" label="Afdeling" value={user?.department} />
-          <Field icon="shield" label="Rol" value={user?.role} last />
+          <Field
+            icon="briefcase"
+            label="Functie"
+            value={user?.functie || user?.jobTitle}
+          />
+          <Field icon="grid" label="Afdeling" value={user?.department} last />
         </Card>
 
         <Pressable
