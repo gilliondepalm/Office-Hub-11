@@ -75,6 +75,32 @@ export default function BeloningenScreen() {
     return `${initialen.join("")} ${achternaam}`;
   }, [user?.fullName]);
 
+  const scoreLabels: Record<number, string> = {
+    1: "Onvoldoende",
+    2: "Nog te ontwikkelen",
+    3: "Normaal/goed",
+    4: "Zeer goed/aantoonbaar beter",
+    5: "Uitstekend/voorbeeld voor anderen",
+  };
+
+  function parseScore(raw?: string | null): { total?: number; label?: string } {
+    if (!raw) return {};
+    const totalMatch = raw.match(/Totaal:\s*(\d+(?:[.,]\d+)?)/i);
+    const gemMatch = raw.match(/Gemiddeld:\s*(\d+(?:[.,]\d+)?)/i);
+    const total = totalMatch
+      ? parseFloat(totalMatch[1].replace(",", "."))
+      : undefined;
+    const gem = gemMatch
+      ? parseFloat(gemMatch[1].replace(",", "."))
+      : undefined;
+    let label: string | undefined;
+    if (gem != null) {
+      const rounded = Math.max(1, Math.min(5, Math.round(gem)));
+      label = scoreLabels[rounded];
+    }
+    return { total, label };
+  }
+
   const years = React.useMemo(() => {
     const set = new Set<number>();
     reviews.data?.forEach((r) => set.add(r.year));
@@ -147,11 +173,47 @@ export default function BeloningenScreen() {
                     </Text>
                     {myReview ? (
                       <>
-                        <Text
-                          style={[styles.rowValue, { color: colors.foreground }]}
-                        >
-                          {myReview.totalScore || "Geregistreerd"}
-                        </Text>
+                        {(() => {
+                          const { total, label } = parseScore(
+                            myReview.totalScore,
+                          );
+                          if (total == null && !label) {
+                            return (
+                              <Text
+                                style={[
+                                  styles.rowValue,
+                                  { color: colors.foreground },
+                                ]}
+                              >
+                                {myReview.totalScore || "Geregistreerd"}
+                              </Text>
+                            );
+                          }
+                          return (
+                            <>
+                              {total != null ? (
+                                <Text
+                                  style={[
+                                    styles.rowValue,
+                                    { color: colors.foreground },
+                                  ]}
+                                >
+                                  Aantal gescoord: {total}
+                                </Text>
+                              ) : null}
+                              {label ? (
+                                <Text
+                                  style={[
+                                    styles.rowValue,
+                                    { color: colors.primary, marginTop: 2 },
+                                  ]}
+                                >
+                                  {label}
+                                </Text>
+                              ) : null}
+                            </>
+                          );
+                        })()}
                         {myReview.periode ? (
                           <Text
                             style={[
