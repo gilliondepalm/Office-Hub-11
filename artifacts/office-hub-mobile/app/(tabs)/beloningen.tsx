@@ -19,6 +19,97 @@ import { EmptyState } from "./index";
 
 const photo = require("../../assets/brand/beloningen.jpg");
 
+interface BeoordelingScore {
+  id: string;
+  reviewId: string;
+  competencyId?: string;
+  score: number;
+}
+
+function BeoordelingDetails({
+  review,
+  parseScore,
+}: {
+  review: { id: string; totalScore?: string | null; periode?: string | null };
+  parseScore: (raw?: string | null) => { total?: number; label?: string };
+}) {
+  const colors = useColors();
+  const scores = useQuery({
+    queryKey: ["beoordeling-scores", review.id],
+    queryFn: () =>
+      apiJson<BeoordelingScore[]>(`/api/beoordeling/${review.id}/scores`),
+  });
+
+  const { total: sum, label } = parseScore(review.totalScore);
+  const maxPossible =
+    scores.data && scores.data.length > 0 ? scores.data.length * 5 : undefined;
+
+  if (sum == null && !label) {
+    return (
+      <Text
+        style={{
+          color: colors.foreground,
+          fontFamily: "Inter_600SemiBold",
+          fontSize: 14,
+        }}
+      >
+        {review.totalScore || "Geregistreerd"}
+      </Text>
+    );
+  }
+
+  return (
+    <>
+      {maxPossible != null ? (
+        <Text
+          style={{
+            color: colors.foreground,
+            fontFamily: "Inter_600SemiBold",
+            fontSize: 14,
+          }}
+        >
+          Totaal: {maxPossible}
+        </Text>
+      ) : null}
+      {sum != null ? (
+        <Text
+          style={{
+            color: colors.foreground,
+            fontFamily: "Inter_600SemiBold",
+            fontSize: 14,
+            marginTop: 2,
+          }}
+        >
+          Aantal gescoord: {sum}
+        </Text>
+      ) : null}
+      {label ? (
+        <Text
+          style={{
+            color: colors.primary,
+            fontFamily: "Inter_600SemiBold",
+            fontSize: 14,
+            marginTop: 2,
+          }}
+        >
+          {label}
+        </Text>
+      ) : null}
+      {review.periode ? (
+        <Text
+          style={{
+            color: colors.mutedForeground,
+            fontSize: 11,
+            marginTop: 2,
+          }}
+        >
+          {review.periode}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
 interface BeoordelingReview {
   id: string;
   userId: string;
@@ -172,69 +263,10 @@ export default function BeloningenScreen() {
                       Beoordeling{naamMetInitialen ? ` ${naamMetInitialen}` : ""}
                     </Text>
                     {myReview ? (
-                      <>
-                        {(() => {
-                          const { total, label } = parseScore(
-                            myReview.totalScore,
-                          );
-                          if (total == null && !label) {
-                            return (
-                              <Text
-                                style={[
-                                  styles.rowValue,
-                                  { color: colors.foreground },
-                                ]}
-                              >
-                                {myReview.totalScore || "Geregistreerd"}
-                              </Text>
-                            );
-                          }
-                          return (
-                            <>
-                              {total != null ? (
-                                <>
-                                  <Text
-                                    style={[
-                                      styles.rowValue,
-                                      { color: colors.foreground },
-                                    ]}
-                                  >
-                                    Totaal: {total}
-                                  </Text>
-                                  <Text
-                                    style={[
-                                      styles.rowValue,
-                                      { color: colors.foreground, marginTop: 2 },
-                                    ]}
-                                  >
-                                    Aantal gescoord: {total}
-                                  </Text>
-                                </>
-                              ) : null}
-                              {label ? (
-                                <Text
-                                  style={[
-                                    styles.rowValue,
-                                    { color: colors.primary, marginTop: 2 },
-                                  ]}
-                                >
-                                  {label}
-                                </Text>
-                              ) : null}
-                            </>
-                          );
-                        })()}
-                        {myReview.periode ? (
-                          <Text
-                            style={[
-                              styles.rowMeta,
-                              { color: colors.mutedForeground },
-                            ]}
-                          >
-                            {myReview.periode}
-                          </Text>
-                        ) : null}
-                      </>
+                      <BeoordelingDetails
+                        review={myReview}
+                        parseScore={parseScore}
+                      />
                     ) : (
                       <Text
                         style={[
