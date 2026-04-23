@@ -53,6 +53,28 @@ export default function BeloningenScreen() {
 
   const loading = reviews.isLoading || awards.isLoading;
 
+  const naamMetInitialen = React.useMemo(() => {
+    const full = (user?.fullName || "").trim();
+    if (!full) return "";
+    const parts = full.split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    const tussen = new Set([
+      "de", "van", "der", "den", "het", "ten", "ter", "'t", "te", "op", "aan",
+    ]);
+    const initialen: string[] = [];
+    let i = 0;
+    while (i < parts.length - 1 && !tussen.has(parts[i].toLowerCase())) {
+      initialen.push(parts[i].charAt(0).toUpperCase() + ".");
+      i++;
+    }
+    if (initialen.length === 0) {
+      initialen.push(parts[0].charAt(0).toUpperCase() + ".");
+      i = 1;
+    }
+    const achternaam = parts.slice(i).join(" ");
+    return `${initialen.join("")} ${achternaam}`;
+  }, [user?.fullName]);
+
   const years = React.useMemo(() => {
     const set = new Set<number>();
     reviews.data?.forEach((r) => set.add(r.year));
@@ -121,7 +143,7 @@ export default function BeloningenScreen() {
                     <Text
                       style={[styles.rowLabel, { color: colors.mutedForeground }]}
                     >
-                      Beoordeling
+                      Beoordeling{naamMetInitialen ? ` ${naamMetInitialen}` : ""}
                     </Text>
                     {myReview ? (
                       <>
