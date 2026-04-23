@@ -192,14 +192,24 @@ export default function BeloningenScreen() {
                           return (
                             <>
                               {total != null ? (
-                                <Text
-                                  style={[
-                                    styles.rowValue,
-                                    { color: colors.foreground },
-                                  ]}
-                                >
-                                  Aantal gescoord: {total}
-                                </Text>
+                                <>
+                                  <Text
+                                    style={[
+                                      styles.rowValue,
+                                      { color: colors.foreground },
+                                    ]}
+                                  >
+                                    Totaal: {total}
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.rowValue,
+                                      { color: colors.foreground, marginTop: 2 },
+                                    ]}
+                                  >
+                                    Aantal gescoord: {total}
+                                  </Text>
+                                </>
                               ) : null}
                               {label ? (
                                 <Text
