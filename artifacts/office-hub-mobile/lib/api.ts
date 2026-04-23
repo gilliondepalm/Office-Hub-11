@@ -2,9 +2,24 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const COOKIE_KEY = "officehub.session.cookie";
 
-const DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
+const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
 
-export const API_BASE = DOMAIN ? `https://${DOMAIN}` : "";
+function resolveApiBase(): string {
+  if (ENV_DOMAIN) return `https://${ENV_DOMAIN}`;
+  // On Expo web, window.location is the expo dev domain
+  // (e.g. <id>.expo.riker.replit.dev). The API server lives on the
+  // matching main domain (e.g. <id>.riker.replit.dev) at /api.
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const host = window.location.hostname;
+    if (host.includes(".expo.")) {
+      return `${window.location.protocol}//${host.replace(".expo.", ".")}`;
+    }
+    return `${window.location.protocol}//${host}`;
+  }
+  return "";
+}
+
+export const API_BASE = resolveApiBase();
 
 let memoryCookie: string | null = null;
 
