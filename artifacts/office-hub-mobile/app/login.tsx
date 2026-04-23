@@ -5,9 +5,11 @@ import {
   ActivityIndicator,
   Alert,
   ImageBackground,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -81,10 +83,15 @@ export default function LoginScreen() {
       </ImageBackground>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={[styles.formArea, { backgroundColor: colors.background }]}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <View style={styles.formInner}>
+        <ScrollView
+          contentContainerStyle={styles.formInner}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={[styles.welcomeTitle, { color: colors.foreground }]}>
             Welkom terug
           </Text>
@@ -157,7 +164,7 @@ export default function LoginScreen() {
           >
             Kadaster Dashboard v2.0 · GDP © ir. G.G. de Palm
           </Text>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
