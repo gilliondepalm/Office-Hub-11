@@ -16,7 +16,7 @@ import { Card } from "@/components/Card";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/AuthContext";
 
-const photo = require("../../assets/brand/personalia.png");
+const photo = require("../../assets/brand/personalia.jpg");
 
 export default function PersoonlijkScreen() {
   const colors = useColors();

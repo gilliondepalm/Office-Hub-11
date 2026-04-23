@@ -20,7 +20,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/AuthContext";
 import { apiJson } from "@/lib/api";
 
-const dashboardPhoto = require("../../assets/brand/dashboard.png");
+const dashboardPhoto = require("../../assets/brand/dashboard.jpg");
 
 interface DashboardStats {
   totalEmployees?: number;

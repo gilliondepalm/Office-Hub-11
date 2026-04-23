@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { apiJson } from "@/lib/api";
 import { EmptyState } from "./index";
 
-const photo = require("../../assets/brand/beloningen.png");
+const photo = require("../../assets/brand/beloningen.jpg");
 
 interface Reward {
   id: number;
