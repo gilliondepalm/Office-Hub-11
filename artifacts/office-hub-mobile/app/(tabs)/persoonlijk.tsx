@@ -3,7 +3,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
   Alert,
+  BackHandler,
   ImageBackground,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,10 +24,26 @@ export default function PersoonlijkScreen() {
   const colors = useColors();
   const { user, logout } = useAuth();
 
+  const exitApp = async () => {
+    try {
+      await logout();
+    } catch {}
+    if (Platform.OS === "android") {
+      BackHandler.exitApp();
+    } else if (Platform.OS === "web") {
+      try {
+        window.close();
+      } catch {}
+      try {
+        window.location.href = "about:blank";
+      } catch {}
+    }
+  };
+
   const confirmLogout = () => {
     Alert.alert("Uitloggen", "Weet u zeker dat u wilt uitloggen?", [
       { text: "Annuleren", style: "cancel" },
-      { text: "Uitloggen", style: "destructive", onPress: logout },
+      { text: "Uitloggen", style: "destructive", onPress: exitApp },
     ]);
   };
 
