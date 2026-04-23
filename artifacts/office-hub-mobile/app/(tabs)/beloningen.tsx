@@ -19,38 +19,48 @@ import { EmptyState } from "./index";
 
 const photo = require("../../assets/brand/beloningen.jpg");
 
-interface Reward {
-  id: number;
-  title?: string;
-  description?: string;
-  points?: number;
-  date?: string;
-  createdAt?: string;
+interface BeoordelingReview {
+  id: string;
+  userId: string;
+  year: number;
+  totalScore?: string | null;
+  datum?: string | null;
+  periode?: string | null;
+  beoordelaar?: string | null;
 }
 
-function formatDate(d?: string) {
-  if (!d) return "";
-  try {
-    return new Date(d).toLocaleDateString("nl-NL", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return d;
-  }
+interface YearlyAward {
+  id: string;
+  year: number;
+  type: string;
+  name: string;
+  awardedAt?: string;
 }
 
 export default function BeloningenScreen() {
   const colors = useColors();
   const { user } = useAuth();
 
-  const mine = useQuery({
-    queryKey: ["rewards-mine"],
-    queryFn: () => apiJson<Reward[]>("/api/rewards/mine"),
+  const reviews = useQuery({
+    queryKey: ["beoordeling-mine"],
+    queryFn: () => apiJson<BeoordelingReview[]>("/api/beoordeling/mine"),
   });
 
-  const total = mine.data?.reduce((sum, r) => sum + (r.points || 0), 0) || 0;
+  const awards = useQuery({
+    queryKey: ["yearly-awards"],
+    queryFn: () => apiJson<YearlyAward[]>("/api/yearly-awards"),
+  });
+
+  const loading = reviews.isLoading || awards.isLoading;
+
+  const years = React.useMemo(() => {
+    const set = new Set<number>();
+    reviews.data?.forEach((r) => set.add(r.year));
+    awards.data
+      ?.filter((a) => a.type === "department")
+      .forEach((a) => set.add(a.year));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [reviews.data, awards.data]);
 
   return (
     <ScrollView
@@ -72,131 +82,121 @@ export default function BeloningenScreen() {
       </ImageBackground>
 
       <View style={{ padding: 16 }}>
-        <Card
-          style={{
-            marginBottom: 16,
-            alignItems: "center",
-            paddingVertical: 24,
-          }}
-        >
-          <Feather name="award" size={28} color={colors.sidebarPrimary} />
-          <Text
-            style={{
-              color: colors.foreground,
-              fontFamily: "Inter_700Bold",
-              fontSize: 32,
-              marginTop: 8,
-            }}
-          >
-            {total}
-          </Text>
-          <Text
-            style={{
-              color: colors.mutedForeground,
-              fontSize: 12,
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            Totaal punten
-          </Text>
-        </Card>
-
-        <Text
-          style={{
-            color: colors.foreground,
-            fontFamily: "Inter_600SemiBold",
-            fontSize: 15,
-            marginBottom: 8,
-          }}
-        >
-          Geschiedenis
-        </Text>
-
-        {mine.isLoading ? (
+        {loading ? (
           <ActivityIndicator color={colors.primary} />
-        ) : !mine.data?.length ? (
-          <EmptyState text="Nog geen beloningen ontvangen" />
+        ) : years.length === 0 ? (
+          <EmptyState text="Nog geen beoordelingen of awards beschikbaar" />
         ) : (
-          mine.data.map((r) => (
-            <Card
-              key={r.id}
-              style={{
-                marginBottom: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: colors.accent,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Feather
-                  name="star"
-                  size={18}
-                  color={colors.accentForeground}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    color: colors.foreground,
-                    fontFamily: "Inter_600SemiBold",
-                    fontSize: 14,
-                  }}
-                >
-                  {r.title || "Beloning"}
-                </Text>
-                {r.description ? (
+          years.map((year) => {
+            const myReview = reviews.data?.find((r) => r.year === year);
+            const deptAwards =
+              awards.data?.filter(
+                (a) => a.type === "department" && a.year === year,
+              ) || [];
+
+            return (
+              <Card key={year} style={{ marginBottom: 14 }}>
+                <View style={styles.yearHeader}>
                   <Text
-                    style={{
-                      color: colors.mutedForeground,
-                      fontSize: 12,
-                      marginTop: 2,
-                    }}
+                    style={[styles.yearLabel, { color: colors.foreground }]}
                   >
-                    {r.description}
-                  </Text>
-                ) : null}
-                <Text
-                  style={{
-                    color: colors.mutedForeground,
-                    fontSize: 11,
-                    marginTop: 2,
-                  }}
-                >
-                  {formatDate(r.date || r.createdAt)}
-                </Text>
-              </View>
-              {r.points != null ? (
-                <View
-                  style={{
-                    backgroundColor: colors.primary,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: colors.primaryForeground,
-                      fontFamily: "Inter_700Bold",
-                      fontSize: 13,
-                    }}
-                  >
-                    +{r.points}
+                    {year}
                   </Text>
                 </View>
-              ) : null}
-            </Card>
-          ))
+
+                <View style={styles.row}>
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: colors.accent },
+                    ]}
+                  >
+                    <Feather
+                      name="star"
+                      size={16}
+                      color={colors.accentForeground}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.rowLabel, { color: colors.mutedForeground }]}
+                    >
+                      Beoordeling
+                    </Text>
+                    {myReview ? (
+                      <>
+                        <Text
+                          style={[styles.rowValue, { color: colors.foreground }]}
+                        >
+                          {myReview.totalScore || "Geregistreerd"}
+                        </Text>
+                        {myReview.periode ? (
+                          <Text
+                            style={[
+                              styles.rowMeta,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
+                            {myReview.periode}
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.rowValue,
+                          { color: colors.mutedForeground, fontStyle: "italic" },
+                        ]}
+                      >
+                        Geen beoordeling
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={[styles.row, { marginTop: 12 }]}>
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Feather
+                      name="award"
+                      size={16}
+                      color={colors.primaryForeground}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.rowLabel, { color: colors.mutedForeground }]}
+                    >
+                      Afdeling van het Jaar
+                    </Text>
+                    {deptAwards.length > 0 ? (
+                      deptAwards.map((a) => (
+                        <Text
+                          key={a.id}
+                          style={[styles.rowValue, { color: colors.foreground }]}
+                        >
+                          {a.name}
+                        </Text>
+                      ))
+                    ) : (
+                      <Text
+                        style={[
+                          styles.rowValue,
+                          { color: colors.mutedForeground, fontStyle: "italic" },
+                        ]}
+                      >
+                        Niet toegekend
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </Card>
+            );
+          })
         )}
       </View>
     </ScrollView>
@@ -222,6 +222,46 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
+    marginTop: 2,
+  },
+  yearHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.08)",
+  },
+  yearLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  rowValue: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  rowMeta: {
+    fontSize: 11,
     marginTop: 2,
   },
 });
