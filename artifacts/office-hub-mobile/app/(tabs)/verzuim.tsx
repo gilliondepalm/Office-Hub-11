@@ -163,7 +163,7 @@ export default function VerzuimScreen() {
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.heroContent}>
-          <Text style={styles.heroEyebrow}>Verzuim & verlof</Text>
+          <Text style={styles.heroEyebrow}>Verlof</Text>
           <Text style={styles.heroTitle}>Mijn vakantiesaldo</Text>
           <Text style={styles.heroSubtitle}>
             {user?.fullName || user?.username}

@@ -54,7 +54,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="verzuim"
         options={{
-          title: "Verzuim",
+          title: "Verlof",
           tabBarIcon: ({ color }) => (
             <Feather name="calendar" size={22} color={color} />
           ),
