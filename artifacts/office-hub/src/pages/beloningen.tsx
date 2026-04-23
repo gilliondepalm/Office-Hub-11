@@ -3061,8 +3061,12 @@ export default function BeloningenPage() {
     defaultValues: { year: new Date().getFullYear(), name: "" },
   });
 
-  const mgrForm = useForm<{ year: number; name: string }>({
-    defaultValues: { year: new Date().getFullYear(), name: "" },
+  const mgrForm = useForm<{ year: number; name: string; department: string }>({
+    defaultValues: { year: new Date().getFullYear(), name: "", department: "" },
+  });
+
+  const { data: allDepartments } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/departments"],
   });
 
   const [deptPhoto, setDeptPhoto] = useState<File | null>(null);
@@ -3093,7 +3097,7 @@ export default function BeloningenPage() {
       setDeptPhoto(null);
       setMgrPhoto(null);
       deptForm.reset({ year: new Date().getFullYear(), name: "" });
-      mgrForm.reset({ year: new Date().getFullYear(), name: "" });
+      mgrForm.reset({ year: new Date().getFullYear(), name: "", department: "" });
     },
     onError: () => {
       toast({ title: "Fout bij toekennen", variant: "destructive" });
@@ -3154,8 +3158,20 @@ export default function BeloningenPage() {
                     <Input type="number" {...deptForm.register("year", { valueAsNumber: true })} data-testid="input-dept-award-year" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Naam Afdeling</label>
-                    <Input {...deptForm.register("name", { required: true })} placeholder="Bijv. Financiën" data-testid="input-dept-award-name" />
+                    <label className="text-sm font-medium">Afdeling</label>
+                    <Select
+                      value={deptForm.watch("name") || ""}
+                      onValueChange={(v) => deptForm.setValue("name", v, { shouldValidate: true })}
+                    >
+                      <SelectTrigger data-testid="select-dept-award-name">
+                        <SelectValue placeholder="Kies een afdeling" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allDepartments?.slice().sort((a, b) => a.name.localeCompare(b.name)).map((d) => (
+                          <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Foto (optioneel)</label>
@@ -3180,10 +3196,29 @@ export default function BeloningenPage() {
                 <DialogHeader>
                   <DialogTitle>Manager van het Jaar</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={mgrForm.handleSubmit((d) => createAwardMutation.mutate({ ...d, type: "manager", photo: mgrPhoto }))} className="space-y-4">
+                <form onSubmit={mgrForm.handleSubmit((d) => {
+                  const fullName = d.department ? `${d.name} (${d.department})` : d.name;
+                  createAwardMutation.mutate({ year: d.year, name: fullName, type: "manager", photo: mgrPhoto });
+                })} className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Jaar</label>
                     <Input type="number" {...mgrForm.register("year", { valueAsNumber: true })} data-testid="input-mgr-award-year" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Afdeling</label>
+                    <Select
+                      value={mgrForm.watch("department") || ""}
+                      onValueChange={(v) => mgrForm.setValue("department", v, { shouldValidate: true })}
+                    >
+                      <SelectTrigger data-testid="select-mgr-award-department">
+                        <SelectValue placeholder="Kies een afdeling" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allDepartments?.slice().sort((a, b) => a.name.localeCompare(b.name)).map((d) => (
+                          <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Naam Manager</label>
