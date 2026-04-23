@@ -178,12 +178,12 @@ export default function VerzuimScreen() {
           ) : (
             <View style={styles.balanceRow}>
               <BalanceCell label="Totaal" value={myBalance?.totalDays} />
-              <BalanceCell label="Ziek" value={myBalance?.sickDays} />
               <BalanceCell
                 label="Resterend"
                 value={myBalance?.remainingDays}
                 highlight
               />
+              <BalanceCell label="Ziekte" value={myBalance?.sickDays} />
             </View>
           )}
           {myBalance?.saldoOud != null && myBalance.saldoOud > 0 ? (
