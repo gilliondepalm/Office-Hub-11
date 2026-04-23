@@ -234,16 +234,18 @@ export default function BeloningenScreen() {
               ) || [];
 
             return (
-              <Card key={year} style={{ marginBottom: 14 }}>
-                <View style={styles.yearHeader}>
-                  <Text
-                    style={[styles.yearLabel, { color: colors.foreground }]}
-                  >
-                    {year}
-                  </Text>
-                </View>
+              <View key={year} style={{ marginBottom: 18 }}>
+                <Text
+                  style={[
+                    styles.yearLabel,
+                    { color: colors.foreground, marginBottom: 8 },
+                  ]}
+                >
+                  {year}
+                </Text>
 
-                <View style={styles.row}>
+                <Card style={{ marginBottom: 10 }}>
+                  <View style={styles.row}>
                   <View
                     style={[
                       styles.iconCircle,
@@ -278,9 +280,11 @@ export default function BeloningenScreen() {
                       </Text>
                     )}
                   </View>
-                </View>
+                  </View>
+                </Card>
 
-                <View style={[styles.row, { marginTop: 12 }]}>
+                <Card>
+                  <View style={styles.row}>
                   <View
                     style={[
                       styles.iconCircle,
@@ -319,8 +323,9 @@ export default function BeloningenScreen() {
                       </Text>
                     )}
                   </View>
-                </View>
-              </Card>
+                  </View>
+                </Card>
+              </View>
             );
           })
         )}
