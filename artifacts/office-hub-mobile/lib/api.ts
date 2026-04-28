@@ -1,12 +1,26 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 const COOKIE_KEY = "officehub.session.cookie";
 
 const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
 
+function deriveFromExpoHost(host: string | undefined | null): string | null {
+  if (!host) return null;
+  // hostUri / debuggerHost looks like "<id>.expo.<region>.replit.dev:443"
+  // or "192.168.1.5:8081" on a local LAN session. We only handle Replit.
+  const noPort = host.split(":")[0];
+  if (!noPort) return null;
+  if (noPort.includes(".expo.")) {
+    return `https://${noPort.replace(".expo.", ".")}`;
+  }
+  return null;
+}
+
 function resolveApiBase(): string {
   if (ENV_DOMAIN) return `https://${ENV_DOMAIN}`;
-  // On Expo web, window.location is the expo dev domain
+
+  // On Expo web, window.location points at the Expo dev domain
   // (e.g. <id>.expo.riker.replit.dev). The API server lives on the
   // matching main domain (e.g. <id>.riker.replit.dev) at /api.
   if (typeof window !== "undefined" && window.location?.hostname) {
@@ -16,6 +30,19 @@ function resolveApiBase(): string {
     }
     return `${window.location.protocol}//${host}`;
   }
+
+  // On native (Expo Go) we don't have window. Use the Expo dev server
+  // hostname so the app finds the matching API host on Replit.
+  const hostUri =
+    (Constants.expoConfig as any)?.hostUri ||
+    (Constants as any).expoGoConfig?.debuggerHost ||
+    (Constants.manifest2 as any)?.extra?.expoGo?.developer?.hostUri;
+  const fromExpo = deriveFromExpoHost(hostUri);
+  if (fromExpo) return fromExpo;
+
+  console.warn(
+    "[api] Kon API-basis-URL niet bepalen. Stel EXPO_PUBLIC_DOMAIN in.",
+  );
   return "";
 }
 
