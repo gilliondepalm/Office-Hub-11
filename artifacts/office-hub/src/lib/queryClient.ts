@@ -16,9 +16,11 @@ export async function apiRequest(
   if (data !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  if (url === "/api/auth/login") {
-    headers["X-Client"] = "web";
-  }
+  // X-Client / X-Session-Token are added by the global fetch wrapper
+  // installed in main.tsx — but only when the page is inside a
+  // cross-origin iframe (Replit workspace preview). On the top-level
+  // production domain the wrapper is a no-op and httpOnly cookie auth
+  // remains the sole credential transport.
   const res = await fetch(url, {
     method,
     headers,

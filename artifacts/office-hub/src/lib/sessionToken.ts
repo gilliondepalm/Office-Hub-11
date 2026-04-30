@@ -68,19 +68,44 @@ function resolveTarget(input: RequestInfo | URL): ResolvedTarget | null {
 let installed = false;
 
 /**
- * Install a one-time global `fetch` wrapper that:
+ * Returns true when the page is running inside a cross-origin iframe
+ * (e.g. the Replit workspace preview pane). In that case Chrome treats
+ * the API cookie as third-party and silently drops it, even with
+ * `SameSite=None;Secure`, so we fall back to a token transport.
+ *
+ * On the published top-level domain (production), this returns false
+ * and the app keeps using the httpOnly session cookie alone.
+ */
+export function isThirdPartyContext(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.top === window) return false;
+    // Cross-origin: try/catch on accessing the parent's location.
+    // If access throws, parent is a different origin → third-party context.
+    void window.top?.location.href;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Install a one-time global `fetch` wrapper that — only when running
+ * inside a cross-origin iframe (Replit workspace preview):
  *   - injects `X-Session-Token` on every same-origin `/api/...` request,
- *     so authentication still works inside the Replit workspace iframe
- *     where Chrome blocks third-party cookies (parent: replit.com,
- *     iframe origin: *.replit.dev).
+ *     so authentication still works where Chrome blocks third-party
+ *     cookies (parent: replit.com, iframe origin: *.replit.dev).
  *   - sets `X-Client: web` on the `/api/auth/login` request so the
  *     server returns the signed session token in the response body.
  *   - defaults `credentials: "include"` for same-origin `/api/*` calls
  *     so any remaining cookie-based callers keep working unchanged.
  *
- * Cross-origin requests and non-`/api/*` requests are passed through
- * untouched (no auth header injection, no credentials override) to
- * prevent leaking the bearer-equivalent session token to other origins.
+ * On the production top-level domain (no iframe), the wrapper is a
+ * no-op pass-through, preserving httpOnly cookie protection in full.
+ *
+ * Cross-origin requests and non-`/api/*` requests are always passed
+ * through untouched to prevent leaking the bearer-equivalent session
+ * token to other origins.
  *
  * Existing `Request` objects are preserved (their headers, body,
  * credentials, mode, etc.) and only auth headers are added on top.
@@ -91,6 +116,14 @@ export function installAuthFetch(): void {
     return;
   }
   installed = true;
+
+  // Only enable the token transport when we're inside a cross-origin
+  // iframe (Replit workspace preview). On the production top-level
+  // domain we leave the original fetch alone so httpOnly cookie auth
+  // remains the only credential transport.
+  if (!isThirdPartyContext()) {
+    return;
+  }
 
   const originalFetch = window.fetch.bind(window);
 
