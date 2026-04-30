@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
-const COOKIE_KEY = "officehub.session.cookie";
+const TOKEN_KEY = "officehub.session.token";
 
 const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
 
@@ -9,11 +9,8 @@ function extractHostname(value: string | undefined | null): string | null {
   if (!value) return null;
   let s = String(value).trim();
   if (!s) return null;
-  // Strip scheme if present
   s = s.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "");
-  // Strip path / query / fragment
   s = s.split("/")[0].split("?")[0].split("#")[0];
-  // Strip port (last colon, ignoring IPv6 brackets)
   if (s.startsWith("[")) {
     const end = s.indexOf("]");
     if (end > 0) s = s.substring(1, end);
@@ -26,7 +23,6 @@ function extractHostname(value: string | undefined | null): string | null {
 function deriveFromHost(host: string | undefined | null): string | null {
   const clean = extractHostname(host);
   if (!clean) return null;
-  // Only Replit dev hosts are useful as an API origin.
   if (!clean.endsWith(".replit.dev")) return null;
   if (clean.includes(".expo.")) {
     return `https://${clean.replace(".expo.", ".")}`;
@@ -37,9 +33,6 @@ function deriveFromHost(host: string | undefined | null): string | null {
 function resolveApiBase(): string {
   if (ENV_DOMAIN) return `https://${ENV_DOMAIN}`;
 
-  // On Expo web, window.location points at the Expo dev domain
-  // (e.g. <id>.expo.riker.replit.dev). The API server lives on the
-  // matching main domain (e.g. <id>.riker.replit.dev) at /api.
   if (typeof window !== "undefined" && window.location?.hostname) {
     const host = window.location.hostname;
     if (host.includes(".expo.")) {
@@ -48,9 +41,6 @@ function resolveApiBase(): string {
     return `${window.location.protocol}//${host}`;
   }
 
-  // On native (Expo Go) we don't have window. Read the Expo dev server
-  // hostname from whichever manifest field happens to be populated, and
-  // map it to the matching API host on Replit.
   const candidates: Array<string | undefined> = [
     (Constants.expoConfig as any)?.hostUri,
     (Constants as any).expoGoConfig?.debuggerHost,
@@ -74,42 +64,29 @@ function resolveApiBase(): string {
 
 export const API_BASE = resolveApiBase();
 
-let memoryCookie: string | null = null;
+let memoryToken: string | null = null;
 
-export async function loadCookie(): Promise<string | null> {
-  if (memoryCookie) return memoryCookie;
-  const stored = await AsyncStorage.getItem(COOKIE_KEY);
-  memoryCookie = stored;
+export async function loadToken(): Promise<string | null> {
+  if (memoryToken) return memoryToken;
+  const stored = await AsyncStorage.getItem(TOKEN_KEY);
+  memoryToken = stored;
   return stored;
 }
 
-export async function saveCookie(cookie: string | null): Promise<void> {
-  memoryCookie = cookie;
-  if (cookie) {
-    await AsyncStorage.setItem(COOKIE_KEY, cookie);
+export async function saveToken(token: string | null): Promise<void> {
+  memoryToken = token;
+  if (token) {
+    await AsyncStorage.setItem(TOKEN_KEY, token);
   } else {
-    await AsyncStorage.removeItem(COOKIE_KEY);
+    await AsyncStorage.removeItem(TOKEN_KEY);
   }
-}
-
-function extractSessionCookie(setCookieHeader: string | null): string | null {
-  if (!setCookieHeader) return null;
-  const parts = setCookieHeader.split(/,(?=[^;]+?=)/);
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (trimmed.toLowerCase().startsWith("connect.sid=")) {
-      const semi = trimmed.indexOf(";");
-      return semi >= 0 ? trimmed.substring(0, semi) : trimmed;
-    }
-  }
-  return null;
 }
 
 export async function apiFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const cookie = await loadCookie();
+  const token = await loadToken();
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...((init.headers as Record<string, string>) || {}),
@@ -117,22 +94,14 @@ export async function apiFetch(
   if (init.body && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
-  if (cookie) headers["Cookie"] = cookie;
+  if (token) headers["X-Session-Token"] = token;
 
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  const res = await fetch(url, {
+  return fetch(url, {
     ...init,
     headers,
     credentials: "include",
   });
-
-  const setCookie =
-    res.headers.get("set-cookie") || res.headers.get("Set-Cookie");
-  const session = extractSessionCookie(setCookie);
-  if (session) {
-    await saveCookie(session);
-  }
-  return res;
 }
 
 export async function apiJson<T = any>(

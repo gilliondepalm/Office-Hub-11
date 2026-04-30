@@ -205,6 +205,25 @@ export async function registerRoutes(
     console.warn("[SECURITY] SESSION_SECRET is niet ingesteld. Een tijdelijke sleutel wordt gebruikt. Stel SESSION_SECRET in als omgevingsvariabele voor productie.");
   }
 
+  // Allow native clients (Expo Go) to authenticate via an explicit
+  // X-Session-Token header. Browsers cookies are unreliable on a
+  // cross-origin Expo dev domain, and on iOS NSURLSession does not
+  // expose Set-Cookie back to JS. By accepting the signed session
+  // cookie value as a header and re-injecting it into req.headers.cookie
+  // before the session middleware runs, the same express-session flow
+  // works for both web and mobile clients.
+  app.use((req, _res, next) => {
+    const raw = req.headers["x-session-token"];
+    const token = Array.isArray(raw) ? raw[0] : raw;
+    if (token) {
+      const cookieValue = `connect.sid=${token}`;
+      req.headers.cookie = req.headers.cookie
+        ? `${req.headers.cookie}; ${cookieValue}`
+        : cookieValue;
+    }
+    next();
+  });
+
   app.use(
     session({
       store: new PgStore({
@@ -708,7 +727,21 @@ export async function registerRoutes(
             return res.status(500).json({ message: "Sessie fout" });
           }
           const { password: _, ...safeUser } = user;
-          res.json(safeUser);
+          // Expose the signed session cookie value so native clients
+          // (Expo Go) can store it and send it back as X-Session-Token.
+          // express-session signs the session id with HMAC-SHA256 of the
+          // session secret and prefixes the value with "s:". We compute
+          // the same value here deterministically rather than relying on
+          // res.getHeader("Set-Cookie"), which is only populated by
+          // express-session's on-headers hook right before the response
+          // is flushed (i.e. after this callback).
+          const sig = crypto
+            .createHmac("sha256", sessionSecret)
+            .update(req.sessionID)
+            .digest("base64")
+            .replace(/=+$/, "");
+          const sessionToken = encodeURIComponent(`s:${req.sessionID}.${sig}`);
+          res.json({ ...safeUser, sessionToken });
         });
       });
     } catch (err) {

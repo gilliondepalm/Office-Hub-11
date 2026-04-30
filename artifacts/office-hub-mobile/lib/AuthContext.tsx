@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { apiFetch, apiJson, saveCookie } from "./api";
+import { apiFetch, apiJson, saveToken } from "./api";
 
 export interface User {
   id: number;
@@ -59,11 +59,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (username: string, password: string) => {
-      const data = await apiJson<User>("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      });
-      setUser(data);
+      const data = await apiJson<User & { sessionToken?: string }>(
+        "/api/auth/login",
+        {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        },
+      );
+      if (data.sessionToken) {
+        await saveToken(data.sessionToken);
+      }
+      const { sessionToken: _t, ...rest } = data;
+      setUser(rest as User);
     },
     [],
   );
@@ -72,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
-    await saveCookie(null);
+    await saveToken(null);
     setUser(null);
   }, []);
 
