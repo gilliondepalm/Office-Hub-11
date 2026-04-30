@@ -5,16 +5,33 @@ const COOKIE_KEY = "officehub.session.cookie";
 
 const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
 
-function deriveFromExpoHost(host: string | undefined | null): string | null {
-  if (!host) return null;
-  // hostUri / debuggerHost looks like "<id>.expo.<region>.replit.dev:443"
-  // or "192.168.1.5:8081" on a local LAN session. We only handle Replit.
-  const noPort = host.split(":")[0];
-  if (!noPort) return null;
-  if (noPort.includes(".expo.")) {
-    return `https://${noPort.replace(".expo.", ".")}`;
+function extractHostname(value: string | undefined | null): string | null {
+  if (!value) return null;
+  let s = String(value).trim();
+  if (!s) return null;
+  // Strip scheme if present
+  s = s.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, "");
+  // Strip path / query / fragment
+  s = s.split("/")[0].split("?")[0].split("#")[0];
+  // Strip port (last colon, ignoring IPv6 brackets)
+  if (s.startsWith("[")) {
+    const end = s.indexOf("]");
+    if (end > 0) s = s.substring(1, end);
+  } else if (s.includes(":")) {
+    s = s.split(":")[0];
   }
-  return null;
+  return s || null;
+}
+
+function deriveFromHost(host: string | undefined | null): string | null {
+  const clean = extractHostname(host);
+  if (!clean) return null;
+  // Only Replit dev hosts are useful as an API origin.
+  if (!clean.endsWith(".replit.dev")) return null;
+  if (clean.includes(".expo.")) {
+    return `https://${clean.replace(".expo.", ".")}`;
+  }
+  return `https://${clean}`;
 }
 
 function resolveApiBase(): string {
@@ -31,14 +48,23 @@ function resolveApiBase(): string {
     return `${window.location.protocol}//${host}`;
   }
 
-  // On native (Expo Go) we don't have window. Use the Expo dev server
-  // hostname so the app finds the matching API host on Replit.
-  const hostUri =
-    (Constants.expoConfig as any)?.hostUri ||
-    (Constants as any).expoGoConfig?.debuggerHost ||
-    (Constants.manifest2 as any)?.extra?.expoGo?.developer?.hostUri;
-  const fromExpo = deriveFromExpoHost(hostUri);
-  if (fromExpo) return fromExpo;
+  // On native (Expo Go) we don't have window. Read the Expo dev server
+  // hostname from whichever manifest field happens to be populated, and
+  // map it to the matching API host on Replit.
+  const candidates: Array<string | undefined> = [
+    (Constants.expoConfig as any)?.hostUri,
+    (Constants as any).expoGoConfig?.debuggerHost,
+    (Constants as any).expoGoConfig?.hostUri,
+    (Constants.manifest2 as any)?.extra?.expoGo?.debuggerHost,
+    (Constants.manifest2 as any)?.extra?.expoGo?.developer?.hostUri,
+    (Constants.manifest2 as any)?.extra?.expoClient?.hostUri,
+    (Constants as any).manifest?.hostUri,
+    (Constants as any).manifest?.debuggerHost,
+  ];
+  for (const c of candidates) {
+    const url = deriveFromHost(c);
+    if (url) return url;
+  }
 
   console.warn(
     "[api] Kon API-basis-URL niet bepalen. Stel EXPO_PUBLIC_DOMAIN in.",
