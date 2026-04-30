@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         "/api/auth/login",
         {
           method: "POST",
+          headers: { "X-Client": "mobile" },
           body: JSON.stringify({ username, password }),
         },
       );

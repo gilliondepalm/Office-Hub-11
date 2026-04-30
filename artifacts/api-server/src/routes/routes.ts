@@ -727,21 +727,30 @@ export async function registerRoutes(
             return res.status(500).json({ message: "Sessie fout" });
           }
           const { password: _, ...safeUser } = user;
-          // Expose the signed session cookie value so native clients
-          // (Expo Go) can store it and send it back as X-Session-Token.
-          // express-session signs the session id with HMAC-SHA256 of the
-          // session secret and prefixes the value with "s:". We compute
-          // the same value here deterministically rather than relying on
-          // res.getHeader("Set-Cookie"), which is only populated by
-          // express-session's on-headers hook right before the response
-          // is flushed (i.e. after this callback).
-          const sig = crypto
-            .createHmac("sha256", sessionSecret)
-            .update(req.sessionID)
-            .digest("base64")
-            .replace(/=+$/, "");
-          const sessionToken = encodeURIComponent(`s:${req.sessionID}.${sig}`);
-          res.json({ ...safeUser, sessionToken });
+          // Web clients keep using the httpOnly session cookie unchanged.
+          // Native clients (Expo Go) cannot read Set-Cookie reliably and
+          // do not share an OS cookie jar with the API origin, so they
+          // opt in to a token transport by sending `X-Client: mobile`
+          // on /api/auth/login. Only those requests get the signed
+          // session value back in the body and may then send it as
+          // X-Session-Token on subsequent requests. Browsers never
+          // receive the token, preserving httpOnly semantics on the web.
+          const clientHeader = req.headers["x-client"];
+          const clientKind = Array.isArray(clientHeader)
+            ? clientHeader[0]
+            : clientHeader;
+          if (clientKind === "mobile") {
+            const sig = crypto
+              .createHmac("sha256", sessionSecret)
+              .update(req.sessionID)
+              .digest("base64")
+              .replace(/=+$/, "");
+            const sessionToken = encodeURIComponent(
+              `s:${req.sessionID}.${sig}`,
+            );
+            return res.json({ ...safeUser, sessionToken });
+          }
+          res.json(safeUser);
         });
       });
     } catch (err) {
