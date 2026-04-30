@@ -27,7 +27,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Expo (React Native) app mirroring the web app's branding (green #27865A, dark sidebar #213B2F, yellow #FACC14)
 - Tabs: Dashboard, Werktijden, Verzuim, Beloningen, Persoonlijk
 - Calls the same `/api/*` endpoints as the web app via `EXPO_PUBLIC_DOMAIN`
-- Session cookie persisted via `AsyncStorage` (manual `connect.sid` capture in `lib/api.ts`)
+- Auth via signed `X-Session-Token` header (server returns it in login response when `X-Client: mobile`); token stored in `AsyncStorage` (`lib/api.ts`)
 - Brand assets in `assets/brand/` mirrored from api-server `uploads/App_pics/`
 
 ### API Server (`artifacts/api-server/`) — port 8080
@@ -35,6 +35,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Routes: `src/routes/routes.ts` — 3927-line legacy `registerRoutes` function
 - Paths served: `/api`, `/uploads`, `/PDF`
 - Session auth via `express-session` + `connect-pg-simple`
+- `X-Session-Token` header bridge (read pre-session, re-injected as `connect.sid` cookie) used by web (inside Replit iframe where Chrome blocks third-party cookies) and mobile clients
+- Login returns `sessionToken` in body when `X-Client: web` or `X-Client: mobile` header is present
 - File uploads via `multer` (pasfoto, beloningen, functies, aankondigingen, CSV)
 
 ### Shared Libraries

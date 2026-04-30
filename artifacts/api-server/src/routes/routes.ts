@@ -727,19 +727,24 @@ export async function registerRoutes(
             return res.status(500).json({ message: "Sessie fout" });
           }
           const { password: _, ...safeUser } = user;
-          // Web clients keep using the httpOnly session cookie unchanged.
-          // Native clients (Expo Go) cannot read Set-Cookie reliably and
-          // do not share an OS cookie jar with the API origin, so they
-          // opt in to a token transport by sending `X-Client: mobile`
-          // on /api/auth/login. Only those requests get the signed
-          // session value back in the body and may then send it as
-          // X-Session-Token on subsequent requests. Browsers never
-          // receive the token, preserving httpOnly semantics on the web.
+          // Clients that opt in by sending an explicit `X-Client` header
+          // ("web" or "mobile") receive the signed session value in the
+          // response body and may then send it back as `X-Session-Token`
+          // on subsequent requests. This is necessary because:
+          //   - Native clients (Expo Go) cannot read Set-Cookie reliably
+          //     and do not share an OS cookie jar with the API origin.
+          //   - The web app runs inside the Replit workspace iframe whose
+          //     top-level site is replit.com, so Chrome treats the API
+          //     cookie as third-party and silently drops it even with
+          //     SameSite=None;Secure.
+          // Browsers loaded as the top-level page (e.g. published
+          // production domain) do not send `X-Client` and continue using
+          // the httpOnly cookie alone, preserving httpOnly semantics.
           const clientHeader = req.headers["x-client"];
           const clientKind = Array.isArray(clientHeader)
             ? clientHeader[0]
             : clientHeader;
-          if (clientKind === "mobile") {
+          if (clientKind === "web" || clientKind === "mobile") {
             const sig = crypto
               .createHmac("sha256", sessionSecret)
               .update(req.sessionID)

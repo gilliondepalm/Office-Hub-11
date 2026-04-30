@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { User } from "@/lib/shared-schema";
 import { apiRequest, queryClient } from "./queryClient";
+import { saveSessionToken } from "./sessionToken";
 
 interface AuthContextType {
   user: User | null;
@@ -17,7 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetch("/api/auth/me");
       if (res.ok) {
         const data = await res.json();
         setUser(data);
@@ -38,11 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (username: string, password: string) => {
     const res = await apiRequest("POST", "/api/auth/login", { username, password });
     const data = await res.json();
-    setUser(data);
+    if (data?.sessionToken) {
+      saveSessionToken(data.sessionToken);
+    }
+    const { sessionToken: _t, ...user } = data ?? {};
+    setUser(user as User);
   };
 
   const logout = async () => {
-    await apiRequest("POST", "/api/auth/logout");
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+    } catch {}
+    saveSessionToken(null);
     setUser(null);
     queryClient.clear();
   };
