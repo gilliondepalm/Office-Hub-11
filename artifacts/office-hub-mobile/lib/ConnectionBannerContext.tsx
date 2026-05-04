@@ -8,12 +8,14 @@ import React, {
   useState,
 } from "react";
 
-import { checkConnection, onNetworkError } from "./api";
+import { checkConnection, onConnectionQuality, onNetworkError } from "./api";
 import { useAuth } from "./AuthContext";
 
 interface ConnectionBannerContextValue {
   bannerVisible: boolean;
+  slowConnection: boolean;
   dismiss: () => void;
+  dismissSlow: () => void;
   retry: () => Promise<void>;
 }
 
@@ -21,6 +23,7 @@ const ConnectionBannerContext =
   createContext<ConnectionBannerContextValue | null>(null);
 
 const POLL_INTERVAL = 5000;
+const CONSECUTIVE_FAST_TO_CLEAR = 2;
 
 export function ConnectionBannerProvider({
   children,
@@ -30,8 +33,11 @@ export function ConnectionBannerProvider({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [bannerVisible, setBannerVisible] = useState(false);
+  const [slowConnection, setSlowConnection] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dismissedRef = useRef(false);
+  const slowDismissedRef = useRef(false);
+  const consecutiveFastRef = useRef(0);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -56,15 +62,34 @@ export function ConnectionBannerProvider({
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribe = onNetworkError(() => {
+    const unsubNetwork = onNetworkError(() => {
+      setSlowConnection(false);
+      slowDismissedRef.current = false;
+      consecutiveFastRef.current = 0;
       if (!dismissedRef.current) {
         setBannerVisible(true);
       }
       startPolling();
     });
 
+    const unsubQuality = onConnectionQuality((slow) => {
+      if (slow) {
+        consecutiveFastRef.current = 0;
+        if (!slowDismissedRef.current) {
+          setSlowConnection(true);
+        }
+      } else {
+        consecutiveFastRef.current += 1;
+        if (consecutiveFastRef.current >= CONSECUTIVE_FAST_TO_CLEAR) {
+          setSlowConnection(false);
+          slowDismissedRef.current = false;
+        }
+      }
+    });
+
     return () => {
-      unsubscribe();
+      unsubNetwork();
+      unsubQuality();
       stopPolling();
     };
   }, [user, startPolling, stopPolling]);
@@ -72,7 +97,10 @@ export function ConnectionBannerProvider({
   useEffect(() => {
     if (!user) {
       setBannerVisible(false);
+      setSlowConnection(false);
       dismissedRef.current = false;
+      slowDismissedRef.current = false;
+      consecutiveFastRef.current = 0;
       stopPolling();
     }
   }, [user, stopPolling]);
@@ -80,6 +108,11 @@ export function ConnectionBannerProvider({
   const dismiss = useCallback(() => {
     setBannerVisible(false);
     dismissedRef.current = true;
+  }, []);
+
+  const dismissSlow = useCallback(() => {
+    setSlowConnection(false);
+    slowDismissedRef.current = true;
   }, []);
 
   const retry = useCallback(async () => {
@@ -93,7 +126,9 @@ export function ConnectionBannerProvider({
   }, [stopPolling, queryClient]);
 
   return (
-    <ConnectionBannerContext.Provider value={{ bannerVisible, dismiss, retry }}>
+    <ConnectionBannerContext.Provider
+      value={{ bannerVisible, slowConnection, dismiss, dismissSlow, retry }}
+    >
       {children}
     </ConnectionBannerContext.Provider>
   );

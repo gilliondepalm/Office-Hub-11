@@ -133,6 +133,24 @@ function notifyNetworkError() {
   networkErrorListeners.forEach((l) => l());
 }
 
+export const SLOW_THRESHOLD_MS = 5000;
+
+type ConnectionQualityListener = (slow: boolean) => void;
+const connectionQualityListeners = new Set<ConnectionQualityListener>();
+
+export function onConnectionQuality(
+  listener: ConnectionQualityListener,
+): () => void {
+  connectionQualityListeners.add(listener);
+  return () => {
+    connectionQualityListeners.delete(listener);
+  };
+}
+
+function notifyConnectionQuality(slow: boolean) {
+  connectionQualityListeners.forEach((l) => l(slow));
+}
+
 export async function apiFetch(
   path: string,
   init: RequestInit = {},
@@ -149,11 +167,17 @@ export async function apiFetch(
 
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
   try {
-    return await fetch(url, {
+    const start = Date.now();
+    const response = await fetch(url, {
       ...init,
       headers,
       credentials: "include",
     });
+    const elapsed = Date.now() - start;
+    if (response.ok) {
+      notifyConnectionQuality(elapsed >= SLOW_THRESHOLD_MS);
+    }
+    return response;
   } catch (err) {
     if (isNetworkError(err)) {
       notifyNetworkError();

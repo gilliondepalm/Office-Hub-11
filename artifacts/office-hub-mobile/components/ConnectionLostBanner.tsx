@@ -15,7 +15,8 @@ import { useConnectionBanner } from "@/lib/ConnectionBannerContext";
 import { useOfflineQueue } from "@/lib/OfflineQueueContext";
 
 export function ConnectionLostBanner() {
-  const { bannerVisible, dismiss, retry } = useConnectionBanner();
+  const { bannerVisible, slowConnection, dismiss, dismissSlow, retry } =
+    useConnectionBanner();
   const { pendingCount } = useOfflineQueue();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -23,8 +24,11 @@ export function ConnectionLostBanner() {
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const [mounted, setMounted] = useState(false);
 
+  const showBanner = bannerVisible || slowConnection;
+  const isSlowOnly = slowConnection && !bannerVisible;
+
   useEffect(() => {
-    if (bannerVisible) {
+    if (showBanner) {
       setMounted(true);
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -41,7 +45,7 @@ export function ConnectionLostBanner() {
         setMounted(false);
       });
     }
-  }, [bannerVisible, slideAnim]);
+  }, [showBanner, slideAnim]);
 
   const handleRetry = async () => {
     setRetrying(true);
@@ -52,7 +56,18 @@ export function ConnectionLostBanner() {
     }
   };
 
-  if (!mounted && !bannerVisible) return null;
+  const handleDismiss = () => {
+    if (isSlowOnly) {
+      dismissSlow();
+    } else {
+      dismiss();
+    }
+  };
+
+  if (!mounted && !showBanner) return null;
+
+  const bgColor = isSlowOnly ? colors.warning : colors.destructive;
+  const textColor = isSlowOnly ? "#422006" : "#fff";
 
   return (
     <Animated.View
@@ -60,44 +75,57 @@ export function ConnectionLostBanner() {
         styles.container,
         {
           paddingTop: insets.top + 8,
-          backgroundColor: colors.destructive,
+          backgroundColor: bgColor,
           transform: [{ translateY: slideAnim }],
         },
       ]}
     >
       <View style={styles.content}>
-        <Feather name="wifi-off" size={16} color="#fff" />
+        <Feather
+          name={isSlowOnly ? "alert-triangle" : "wifi-off"}
+          size={16}
+          color={textColor}
+        />
         <View style={{ flex: 1 }}>
-          <Text style={styles.text}>Verbinding verloren</Text>
-          {pendingCount > 0 ? (
-            <Text style={styles.queueText}>
-              {pendingCount} {pendingCount === 1 ? "actie" : "acties"} in wachtrij
+          <Text style={[styles.text, { color: textColor }]}>
+            {isSlowOnly ? "Trage verbinding" : "Verbinding verloren"}
+          </Text>
+          {isSlowOnly ? (
+            <Text style={[styles.subText, { color: textColor }]}>
+              Reacties van de server duren langer dan normaal
+            </Text>
+          ) : pendingCount > 0 ? (
+            <Text style={[styles.subText, { color: textColor }]}>
+              {pendingCount} {pendingCount === 1 ? "actie" : "acties"} in
+              wachtrij
             </Text>
           ) : null}
         </View>
         <View style={styles.actions}>
+          {!isSlowOnly && (
+            <Pressable
+              onPress={handleRetry}
+              disabled={retrying}
+              style={({ pressed }) => [
+                styles.retryButton,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              {retrying ? (
+                <ActivityIndicator size="small" color={textColor} />
+              ) : (
+                <Feather name="refresh-cw" size={14} color={textColor} />
+              )}
+            </Pressable>
+          )}
           <Pressable
-            onPress={handleRetry}
-            disabled={retrying}
-            style={({ pressed }) => [
-              styles.retryButton,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            {retrying ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Feather name="refresh-cw" size={14} color="#fff" />
-            )}
-          </Pressable>
-          <Pressable
-            onPress={dismiss}
+            onPress={handleDismiss}
             style={({ pressed }) => [
               styles.dismissButton,
               { opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Feather name="x" size={16} color="#fff" />
+            <Feather name="x" size={16} color={textColor} />
           </Pressable>
         </View>
       </View>
@@ -121,15 +149,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   text: {
-    color: "#fff",
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
-  queueText: {
-    color: "rgba(255,255,255,0.85)",
+  subText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
     marginTop: 1,
+    opacity: 0.85,
   },
   actions: {
     flexDirection: "row",
