@@ -105,6 +105,20 @@ export async function saveToken(token: string | null): Promise<void> {
   }
 }
 
+type NetworkErrorListener = () => void;
+const networkErrorListeners = new Set<NetworkErrorListener>();
+
+export function onNetworkError(listener: NetworkErrorListener): () => void {
+  networkErrorListeners.add(listener);
+  return () => {
+    networkErrorListeners.delete(listener);
+  };
+}
+
+function notifyNetworkError() {
+  networkErrorListeners.forEach((l) => l());
+}
+
 export async function apiFetch(
   path: string,
   init: RequestInit = {},
@@ -120,11 +134,18 @@ export async function apiFetch(
   if (token) headers["X-Session-Token"] = token;
 
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
-  return fetch(url, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
+  try {
+    return await fetch(url, {
+      ...init,
+      headers,
+      credentials: "include",
+    });
+  } catch (err) {
+    if (isNetworkError(err)) {
+      notifyNetworkError();
+    }
+    throw err;
+  }
 }
 
 export function isNetworkError(err: unknown): boolean {

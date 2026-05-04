@@ -14,8 +14,10 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ConnectionErrorScreen } from "@/components/ConnectionErrorScreen";
+import { ConnectionLostBanner } from "@/components/ConnectionLostBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
+import { ConnectionBannerProvider } from "@/lib/ConnectionBannerContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -45,10 +47,13 @@ function AuthGate() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+      </Stack>
+      <ConnectionLostBanner />
+    </>
   );
 }
 
@@ -75,7 +80,9 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
-                <AuthGate />
+                <ConnectionBannerProvider>
+                  <AuthGate />
+                </ConnectionBannerProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
