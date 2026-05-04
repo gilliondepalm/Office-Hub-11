@@ -12,9 +12,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useConnectionBanner } from "@/lib/ConnectionBannerContext";
+import { useOfflineQueue } from "@/lib/OfflineQueueContext";
 
 export function ConnectionLostBanner() {
   const { bannerVisible, dismiss, retry } = useConnectionBanner();
+  const { pendingCount } = useOfflineQueue();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [retrying, setRetrying] = useState(false);
@@ -65,7 +67,14 @@ export function ConnectionLostBanner() {
     >
       <View style={styles.content}>
         <Feather name="wifi-off" size={16} color="#fff" />
-        <Text style={styles.text}>Verbinding verloren</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.text}>Verbinding verloren</Text>
+          {pendingCount > 0 ? (
+            <Text style={styles.queueText}>
+              {pendingCount} {pendingCount === 1 ? "actie" : "acties"} in wachtrij
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.actions}>
           <Pressable
             onPress={handleRetry}
@@ -112,10 +121,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   text: {
-    flex: 1,
     color: "#fff",
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
+  },
+  queueText: {
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    marginTop: 1,
   },
   actions: {
     flexDirection: "row",

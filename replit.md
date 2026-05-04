@@ -30,6 +30,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Calls the same `/api/*` endpoints as the web app via `EXPO_PUBLIC_DOMAIN`
 - `metro.config.js` has a `blockList` excluding `.vite/` and `dist/` dirs from other artifacts to prevent Metro crash on ephemeral Vite cache files
 - Auth via signed `X-Session-Token` header (server returns it in login response when `X-Client: mobile`); token stored in `AsyncStorage` (`lib/api.ts`)
+- **Offline queue** (`lib/offlineQueue.ts`, `lib/OfflineQueueContext.tsx`): Failed POST/PUT/DELETE/PATCH requests (except `/api/auth/*`) are automatically queued in AsyncStorage when a network error occurs. Queued requests are replayed automatically when connectivity is restored (polled every 5s). A `QueuedOfflineError` is thrown so callers can handle the queued state gracefully. UI indicators: `ConnectionLostBanner` shows pending count when offline; `PendingQueueBadge` shows a floating badge when items are queued but the banner is dismissed.
 - Brand assets in `assets/brand/` mirrored from api-server `uploads/App_pics/`
 - **API base URL resolution** (`lib/api.ts` → `resolveApiBase()`), in order:
   1. `EXPO_PUBLIC_DOMAIN` env var, if set — explicit override (any environment)

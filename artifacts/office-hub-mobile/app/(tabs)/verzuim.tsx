@@ -22,7 +22,7 @@ import {
 import { Card } from "@/components/Card";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/lib/AuthContext";
-import { apiJson } from "@/lib/api";
+import { QueuedOfflineError, apiJson } from "@/lib/api";
 import { EmptyState } from "./index";
 
 const photo = require("../../assets/brand/verzuim.jpg");
@@ -372,6 +372,10 @@ function NewAbsenceModal({
       close();
     },
     onError: (err: unknown) => {
+      if (err instanceof QueuedOfflineError) {
+        close();
+        return;
+      }
       setError(toDutchError(err));
     },
   });

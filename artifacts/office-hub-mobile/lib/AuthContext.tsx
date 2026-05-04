@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { API_BASE, apiFetch, apiJson, checkConnection, isNetworkError, saveToken } from "./api";
+import { clearQueue, setQueueOwner } from "./offlineQueue";
 
 export interface User {
   id: number;
@@ -51,9 +52,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUser(data);
+        setQueueOwner(data.id);
         setConnectionError(false);
       } else {
         setUser(null);
+        setQueueOwner(null);
         setConnectionError(false);
       }
     } catch (err) {
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const { sessionToken: _t, ...rest } = data;
       setUser(rest as User);
+      setQueueOwner(rest.id);
       setConnectionError(false);
     },
     [],
@@ -105,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiFetch("/api/auth/logout", { method: "POST" });
     } catch {}
+    await clearQueue();
+    setQueueOwner(null);
     await saveToken(null);
     setUser(null);
   }, []);

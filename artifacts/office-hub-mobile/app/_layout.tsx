@@ -16,8 +16,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConnectionErrorScreen } from "@/components/ConnectionErrorScreen";
 import { ConnectionLostBanner } from "@/components/ConnectionLostBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PendingQueueBadge } from "@/components/PendingQueueBadge";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import { ConnectionBannerProvider } from "@/lib/ConnectionBannerContext";
+import { OfflineQueueProvider } from "@/lib/OfflineQueueContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -53,6 +55,7 @@ function AuthGate() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
       </Stack>
       <ConnectionLostBanner />
+      <PendingQueueBadge />
     </>
   );
 }
@@ -81,7 +84,9 @@ export default function RootLayout() {
             <KeyboardProvider>
               <AuthProvider>
                 <ConnectionBannerProvider>
-                  <AuthGate />
+                  <OfflineQueueProvider>
+                    <AuthGate />
+                  </OfflineQueueProvider>
                 </ConnectionBannerProvider>
               </AuthProvider>
             </KeyboardProvider>

@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
+import { enqueue } from "./offlineQueue";
+
 const TOKEN_KEY = "officehub.session.token";
 
 const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
@@ -105,6 +107,18 @@ export async function saveToken(token: string | null): Promise<void> {
   }
 }
 
+export class QueuedOfflineError extends Error {
+  public queuedId: string;
+  constructor(queuedId: string) {
+    super("Actie is opgeslagen en wordt verstuurd zodra de verbinding hersteld is.");
+    this.name = "QueuedOfflineError";
+    this.queuedId = queuedId;
+  }
+}
+
+const QUEUE_EXCLUDE_PREFIXES = ["/api/auth/"];
+const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
+
 type NetworkErrorListener = () => void;
 const networkErrorListeners = new Set<NetworkErrorListener>();
 
@@ -143,9 +157,43 @@ export async function apiFetch(
   } catch (err) {
     if (isNetworkError(err)) {
       notifyNetworkError();
+
+      const method = (init.method || "GET").toUpperCase();
+      const shouldQueue =
+        MUTATION_METHODS.has(method) &&
+        !QUEUE_EXCLUDE_PREFIXES.some((p) => path.startsWith(p));
+
+      if (shouldQueue) {
+        const entry = await enqueue({
+          path,
+          method,
+          body: typeof init.body === "string" ? init.body : undefined,
+        });
+        if (entry) {
+          throw new QueuedOfflineError(entry.id);
+        }
+      }
     }
     throw err;
   }
+}
+
+export async function replayFetch(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const token = await loadToken();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...((init.headers as Record<string, string>) || {}),
+  };
+  if (init.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (token) headers["X-Session-Token"] = token;
+
+  const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
+  return fetch(url, { ...init, headers, credentials: "include" });
 }
 
 export function isNetworkError(err: unknown): boolean {
