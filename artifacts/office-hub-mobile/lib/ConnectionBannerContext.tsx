@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,
   useCallback,
@@ -27,6 +28,7 @@ export function ConnectionBannerProvider({
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [bannerVisible, setBannerVisible] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dismissedRef = useRef(false);
@@ -46,9 +48,10 @@ export function ConnectionBannerProvider({
         setBannerVisible(false);
         dismissedRef.current = false;
         stopPolling();
+        queryClient.invalidateQueries();
       }
     }, POLL_INTERVAL);
-  }, [stopPolling]);
+  }, [stopPolling, queryClient]);
 
   useEffect(() => {
     if (!user) return;
@@ -85,8 +88,9 @@ export function ConnectionBannerProvider({
       setBannerVisible(false);
       dismissedRef.current = false;
       stopPolling();
+      queryClient.invalidateQueries();
     }
-  }, [stopPolling]);
+  }, [stopPolling, queryClient]);
 
   return (
     <ConnectionBannerContext.Provider value={{ bannerVisible, dismiss, retry }}>
