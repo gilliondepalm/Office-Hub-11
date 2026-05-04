@@ -486,14 +486,14 @@ export default function WerktijdenScreen() {
   const { user } = useAuth();
   const isManager = ADMIN_ROLES.has((user?.role || "").toLowerCase());
 
-  // Default: current month
   const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const [from, setFrom] = useState(dateKey(monthStart));
+  const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const [from, setFrom] = useState(dateKey(prevMonthStart));
   const [to, setTo] = useState(dateKey(today));
   const [pickedKadasterId, setPickedKadasterId] = useState<string>(
     user?.kadasterId || "",
   );
+  const [didAutoSelect, setDidAutoSelect] = useState(false);
   const [userPickerOpen, setUserPickerOpen] = useState(false);
 
   const usersQ = useQuery({
@@ -503,13 +503,8 @@ export default function WerktijdenScreen() {
   });
 
   const recordsQ = useQuery({
-    queryKey: ["werktijden", isManager ? pickedKadasterId : "self"],
-    queryFn: () =>
-      apiJson<Werktijd[]>(
-        isManager && pickedKadasterId
-          ? `/api/werktijden?userid=${encodeURIComponent(pickedKadasterId)}`
-          : "/api/werktijden",
-      ),
+    queryKey: ["werktijden", isManager ? "all" : "self"],
+    queryFn: () => apiJson<Werktijd[]>("/api/werktijden"),
   });
 
   const absencesQ = useQuery({
@@ -524,6 +519,22 @@ export default function WerktijdenScreen() {
       ),
     [usersQ.data],
   );
+
+  React.useEffect(() => {
+    if (!isManager || didAutoSelect || !recordsQ.data || activeUsers.length === 0) return;
+    const hasOwnData = recordsQ.data.some((r) => r.userid === pickedKadasterId);
+    if (!hasOwnData) {
+      const firstWithData = activeUsers.find((u) =>
+        recordsQ.data!.some((r) => r.userid === u.kadasterId),
+      );
+      if (firstWithData?.kadasterId) {
+        setPickedKadasterId(firstWithData.kadasterId);
+      } else if (activeUsers[0]?.kadasterId) {
+        setPickedKadasterId(activeUsers[0].kadasterId);
+      }
+    }
+    setDidAutoSelect(true);
+  }, [isManager, didAutoSelect, recordsQ.data, activeUsers, pickedKadasterId]);
 
   const targetKadasterId = isManager
     ? pickedKadasterId
