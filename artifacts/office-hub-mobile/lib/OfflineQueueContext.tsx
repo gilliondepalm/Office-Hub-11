@@ -11,12 +11,21 @@ import { checkConnection, onNetworkError, replayFetch } from "./api";
 import { useAuth } from "./AuthContext";
 import { getQueue, onQueueChange, processQueue } from "./offlineQueue";
 
+export interface ReplayResult {
+  succeeded: number;
+  failed: number;
+}
+
 interface OfflineQueueContextValue {
   pendingCount: number;
+  replayResult: ReplayResult | null;
+  dismissReplayToast: () => void;
 }
 
 const OfflineQueueContext = createContext<OfflineQueueContextValue>({
   pendingCount: 0,
+  replayResult: null,
+  dismissReplayToast: () => {},
 });
 
 const REPLAY_POLL_INTERVAL = 5000;
@@ -28,8 +37,18 @@ export function OfflineQueueProvider({
 }) {
   const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
+  const [replayResult, setReplayResult] = useState<ReplayResult | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const processingRef = useRef(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissReplayToast = useCallback(() => {
+    setReplayResult(null);
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     getQueue().then((q) => setPendingCount(q.length));
@@ -43,7 +62,15 @@ export function OfflineQueueProvider({
     if (processingRef.current) return;
     processingRef.current = true;
     try {
-      await processQueue(replayFetch);
+      const result = await processQueue(replayFetch);
+      if (result.succeeded > 0 || result.failed > 0) {
+        setReplayResult(result);
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => {
+          setReplayResult(null);
+          toastTimerRef.current = null;
+        }, 5000);
+      }
     } finally {
       processingRef.current = false;
     }
@@ -96,8 +123,16 @@ export function OfflineQueueProvider({
     });
   }, [user, startPolling, stopPolling]);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
   return (
-    <OfflineQueueContext.Provider value={{ pendingCount }}>
+    <OfflineQueueContext.Provider
+      value={{ pendingCount, replayResult, dismissReplayToast }}
+    >
       {children}
     </OfflineQueueContext.Provider>
   );

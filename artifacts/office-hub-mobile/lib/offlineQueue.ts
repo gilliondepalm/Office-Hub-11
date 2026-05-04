@@ -101,9 +101,12 @@ export async function processQueue(
           method: item.method,
           body: item.body,
         });
-        if (res.ok || res.status < 500) {
+        if (res.ok) {
           await removeFromQueue(item.id);
           succeeded++;
+        } else if (res.status < 500) {
+          await removeFromQueue(item.id);
+          failed++;
         } else {
           failed++;
         }

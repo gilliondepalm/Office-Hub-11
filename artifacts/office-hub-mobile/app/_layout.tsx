@@ -17,6 +17,7 @@ import { ConnectionErrorScreen } from "@/components/ConnectionErrorScreen";
 import { ConnectionLostBanner } from "@/components/ConnectionLostBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PendingQueueBadge } from "@/components/PendingQueueBadge";
+import { QueueReplayToast } from "@/components/QueueReplayToast";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import { ConnectionBannerProvider } from "@/lib/ConnectionBannerContext";
 import { OfflineQueueProvider } from "@/lib/OfflineQueueContext";
@@ -56,6 +57,7 @@ function AuthGate() {
       </Stack>
       <ConnectionLostBanner />
       <PendingQueueBadge />
+      <QueueReplayToast />
     </>
   );
 }
