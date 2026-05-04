@@ -127,6 +127,37 @@ export async function apiFetch(
   });
 }
 
+export function isNetworkError(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    return (
+      msg.includes("network request failed") ||
+      msg.includes("failed to fetch") ||
+      msg.includes("networkerror") ||
+      msg.includes("timeout")
+    );
+  }
+  return false;
+}
+
+export async function checkConnection(): Promise<boolean> {
+  if (!API_BASE) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${API_BASE}/api/healthz`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function apiJson<T = any>(
   path: string,
   init: RequestInit = {},

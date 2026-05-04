@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { apiFetch, apiJson, saveToken } from "./api";
+import { API_BASE, apiFetch, apiJson, checkConnection, isNetworkError, saveToken } from "./api";
 
 export interface User {
   id: number;
@@ -26,6 +26,8 @@ export interface User {
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  connectionError: boolean;
+  retryConnection: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -36,22 +38,44 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!API_BASE) {
+      setConnectionError(true);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await apiFetch("/api/auth/me");
       if (res.ok) {
         const data = await res.json();
         setUser(data);
+        setConnectionError(false);
       } else {
         setUser(null);
+        setConnectionError(false);
       }
-    } catch {
+    } catch (err) {
       setUser(null);
+      if (isNetworkError(err)) {
+        setConnectionError(true);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const retryConnection = useCallback(async () => {
+    const ok = await checkConnection();
+    if (ok) {
+      setConnectionError(false);
+      setLoading(true);
+      await refresh();
+    } else {
+      setConnectionError(true);
+    }
+  }, [refresh]);
 
   useEffect(() => {
     refresh();
@@ -72,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const { sessionToken: _t, ...rest } = data;
       setUser(rest as User);
+      setConnectionError(false);
     },
     [],
   );
@@ -85,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, connectionError, retryConnection, login, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

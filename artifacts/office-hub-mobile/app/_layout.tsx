@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { ConnectionErrorScreen } from "@/components/ConnectionErrorScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 
@@ -25,19 +26,23 @@ const queryClient = new QueryClient({
 });
 
 function AuthGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, connectionError, retryConnection } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || connectionError) return;
     const inAuth = segments[0] === "login";
     if (!user && !inAuth) {
       router.replace("/login");
     } else if (user && inAuth) {
       router.replace("/");
     }
-  }, [user, loading, segments, router]);
+  }, [user, loading, connectionError, segments, router]);
+
+  if (connectionError) {
+    return <ConnectionErrorScreen onRetry={retryConnection} />;
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
