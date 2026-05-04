@@ -34,6 +34,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "apiUrl": "https://workspace-gilliondepalm.replit.app"
     }
   }
 }

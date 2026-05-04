@@ -5,6 +5,22 @@ const TOKEN_KEY = "officehub.session.token";
 
 const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
 
+type ExtraConfig = { apiUrl?: unknown } & Record<string, unknown>;
+
+function readExtraApiUrl(): string | null {
+  const sources: Array<ExtraConfig | undefined> = [
+    Constants.expoConfig?.extra as ExtraConfig | undefined,
+    (Constants.manifest2 as { extra?: ExtraConfig } | null | undefined)?.extra,
+  ];
+  for (const extra of sources) {
+    const raw = extra?.apiUrl;
+    if (typeof raw !== "string") continue;
+    const trimmed = raw.trim().replace(/\/+$/, "");
+    if (trimmed) return trimmed;
+  }
+  return null;
+}
+
 function extractHostname(value: string | undefined | null): string | null {
   if (!value) return null;
   let s = String(value).trim();
@@ -33,6 +49,13 @@ function deriveFromHost(host: string | undefined | null): string | null {
 function resolveApiBase(): string {
   if (ENV_DOMAIN) return `https://${ENV_DOMAIN}`;
 
+  // EAS production builds (no Expo dev server, no window in the native shell):
+  // use the stable URL baked into app.json `extra.apiUrl`.
+  if (!__DEV__) {
+    const prod = readExtraApiUrl();
+    if (prod) return prod;
+  }
+
   if (typeof window !== "undefined" && window.location?.hostname) {
     const host = window.location.hostname;
     if (host.includes(".expo.")) {
@@ -57,7 +80,7 @@ function resolveApiBase(): string {
   }
 
   console.warn(
-    "[api] Kon API-basis-URL niet bepalen. Stel EXPO_PUBLIC_DOMAIN in.",
+    "[api] Kon API-basis-URL niet bepalen. Stel EXPO_PUBLIC_DOMAIN in (dev) of vul `expo.extra.apiUrl` in app.json (productie).",
   );
   return "";
 }

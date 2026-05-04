@@ -29,6 +29,12 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Calls the same `/api/*` endpoints as the web app via `EXPO_PUBLIC_DOMAIN`
 - Auth via signed `X-Session-Token` header (server returns it in login response when `X-Client: mobile`); token stored in `AsyncStorage` (`lib/api.ts`)
 - Brand assets in `assets/brand/` mirrored from api-server `uploads/App_pics/`
+- **API base URL resolution** (`lib/api.ts` → `resolveApiBase()`), in order:
+  1. `EXPO_PUBLIC_DOMAIN` env var, if set — explicit override (any environment)
+  2. In production builds (`!__DEV__`, e.g. EAS Store builds): `expo.extra.apiUrl` from `app.json` — points at the published api-server (default: `https://workspace-gilliondepalm.replit.app`)
+  3. Web preview (Expo for Web): derived from `window.location.hostname` (maps the `.expo.` Replit dev host back to the matching API host)
+  4. Expo Go on a phone: derived from the dev server `hostUri` reported by `expo-constants`
+- The api-server is the production target for `expo.extra.apiUrl`. Its production deploy is configured in `artifacts/api-server/.replit-artifact/artifact.toml` (autoscale, build via esbuild, run via `node dist/index.mjs`, health probe `/api/healthz`). After the user clicks Publish, confirm the resulting `.replit.app` domain matches `expo.extra.apiUrl` (or update `app.json` and rebuild the mobile app).
 
 ### API Server (`artifacts/api-server/`) — port 8080
 - Express 5 + Drizzle ORM + PostgreSQL
