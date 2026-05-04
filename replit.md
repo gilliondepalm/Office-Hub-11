@@ -22,11 +22,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Dutch-language HR/office management system
 - Preview path: `/`
 - Uses relative `/api/*` calls to the API server (proxied via reverse proxy)
+- **PWA** enabled via `vite-plugin-pwa` (autoUpdate service worker, Workbox precaching, Google Fonts runtime cache). Icons are SVGs in `public/`.
 
 ### Office Hub Mobile (`artifacts/office-hub-mobile/`) — port 22654
 - Expo (React Native) app mirroring the web app's branding (green #27865A, dark sidebar #213B2F, yellow #FACC14)
 - Tabs: Dashboard, Werktijden, Verzuim, Beloningen, Persoonlijk
 - Calls the same `/api/*` endpoints as the web app via `EXPO_PUBLIC_DOMAIN`
+- `metro.config.js` has a `blockList` excluding `.vite/` and `dist/` dirs from other artifacts to prevent Metro crash on ephemeral Vite cache files
 - Auth via signed `X-Session-Token` header (server returns it in login response when `X-Client: mobile`); token stored in `AsyncStorage` (`lib/api.ts`)
 - Brand assets in `assets/brand/` mirrored from api-server `uploads/App_pics/`
 - **API base URL resolution** (`lib/api.ts` → `resolveApiBase()`), in order:
