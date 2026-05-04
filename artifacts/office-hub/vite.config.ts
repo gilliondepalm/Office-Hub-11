@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
 const rawPort = process.env.PORT;
 
@@ -30,6 +31,49 @@ export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.svg", "pwa-icon-192.svg", "pwa-icon-512.svg"],
+      manifest: {
+        name: "Office Hub",
+        short_name: "Office Hub",
+        description: "HR & Personeelsbeheer",
+        theme_color: "#27865A",
+        background_color: "#213B2F",
+        display: "standalone",
+        orientation: "portrait",
+        scope: basePath,
+        start_url: basePath,
+        icons: [
+          {
+            src: "pwa-icon-192.svg",
+            sizes: "192x192",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+          {
+            src: "pwa-icon-512.svg",
+            sizes: "512x512",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,png,jpg,woff,woff2}"],
+        navigateFallback: "index.html",
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts",
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
