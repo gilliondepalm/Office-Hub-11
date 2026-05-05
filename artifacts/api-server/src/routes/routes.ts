@@ -308,7 +308,7 @@ export async function registerRoutes(
     if (!userId) return next();
     try {
       const user = await storage.getUser(userId);
-      if (user && (user as any).mustChangePassword) {
+      if (user && user.mustChangePassword) {
         return res.status(403).json({
           code: "PASSWORD_CHANGE_REQUIRED",
           message: "Wijzig eerst uw wachtwoord voordat u verder werkt.",
@@ -422,7 +422,7 @@ export async function registerRoutes(
       );
       res.json(list);
     } catch (err) {
-      (req as any).log?.error({ err }, "Failed to list aankondigingen");
+      req.log?.error({ err }, "Failed to list aankondigingen");
       res.json([]);
     }
   });
@@ -608,7 +608,7 @@ export async function registerRoutes(
 
       res.json(result);
     } catch (err) {
-      (req as any).log?.error({ err }, "Failed to list instructies");
+      req.log?.error({ err }, "Failed to list instructies");
       res.json({});
     }
   });
@@ -743,7 +743,7 @@ export async function registerRoutes(
       await storage.updateUser(userId, {
         password: hashed,
         mustChangePassword: false,
-      } as any);
+      });
       res.json({ message: "Wachtwoord succesvol gewijzigd" });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Fout bij wijzigen wachtwoord" });
