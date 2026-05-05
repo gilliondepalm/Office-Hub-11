@@ -371,7 +371,7 @@ function RechtenTab() {
                       {(u.permissions?.length || 0) > 0 && (
                         <div className="flex gap-1 flex-wrap mt-1.5">
                           {u.permissions?.map((p) => (
-                            <Badge key={p} variant="outline" className="text-xs">{p}</Badge>
+                            <Badge key={p} variant="outline" className="text-xs">{ALL_MODULES.find((m) => m.key === p)?.label ?? p}</Badge>
                           ))}
                         </div>
                       )}
