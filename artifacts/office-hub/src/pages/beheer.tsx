@@ -72,8 +72,9 @@ function parseSchaal(value: string | undefined | null): number | null {
   if (value === undefined || value === null) return null;
   const trimmed = String(value).trim();
   if (trimmed === "") return null;
-  const n = parseInt(trimmed, 10);
-  return Number.isFinite(n) ? n : null;
+  if (!/^-?\d+$/.test(trimmed)) return null;
+  const n = Number(trimmed);
+  return Number.isInteger(n) ? n : null;
 }
 
 // ─── Dialogs ─────────────────────────────────────────────────────────────────

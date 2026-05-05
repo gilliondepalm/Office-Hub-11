@@ -52,8 +52,13 @@ if (!fs.existsSync(uploadsDir)) {
 
 function toIntOrNull(value: unknown): number | null {
   if (value === undefined || value === null || value === "") return null;
-  const n = typeof value === "number" ? value : parseInt(String(value), 10);
-  return Number.isFinite(n) ? n : null;
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? value : null;
+  }
+  const s = String(value).trim();
+  if (!/^-?\d+$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isInteger(n) ? n : null;
 }
 
 function isWithinDir(dir: string, filePath: string): boolean {
