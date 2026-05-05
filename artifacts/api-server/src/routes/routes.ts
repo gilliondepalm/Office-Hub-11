@@ -50,6 +50,12 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+function toIntOrNull(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  const n = typeof value === "number" ? value : parseInt(String(value), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 function isWithinDir(dir: string, filePath: string): boolean {
   const resolvedDir = path.resolve(dir);
   const resolvedFile = path.resolve(filePath);
@@ -1936,13 +1942,14 @@ export async function registerRoutes(
     }
     const { name, description, departmentId, sortOrder, beginSchaal, eindSchaal } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: "Naam is verplicht" });
+    const sortOrderNum = toIntOrNull(sortOrder);
     const created = await storage.createJobFunction({
       name: name.trim(),
       description: description || null,
       departmentId: departmentId || null,
-      sortOrder: sortOrder !== undefined ? parseInt(sortOrder) : 0,
-      beginSchaal: beginSchaal !== undefined && beginSchaal !== "" ? parseInt(beginSchaal) : null,
-      eindSchaal: eindSchaal !== undefined && eindSchaal !== "" ? parseInt(eindSchaal) : null,
+      sortOrder: sortOrderNum ?? 0,
+      beginSchaal: toIntOrNull(beginSchaal),
+      eindSchaal: toIntOrNull(eindSchaal),
     });
     res.json(created);
   });
@@ -1970,9 +1977,9 @@ export async function registerRoutes(
       ...(name !== undefined && { name: name.trim() }),
       ...(description !== undefined && { description: description || null }),
       ...(departmentId !== undefined && { departmentId: departmentId || null }),
-      ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) }),
-      ...(beginSchaal !== undefined && { beginSchaal: beginSchaal !== "" ? parseInt(beginSchaal) : null }),
-      ...(eindSchaal !== undefined && { eindSchaal: eindSchaal !== "" ? parseInt(eindSchaal) : null }),
+      ...(sortOrder !== undefined && { sortOrder: toIntOrNull(sortOrder) ?? 0 }),
+      ...(beginSchaal !== undefined && { beginSchaal: toIntOrNull(beginSchaal) }),
+      ...(eindSchaal !== undefined && { eindSchaal: toIntOrNull(eindSchaal) }),
     });
     res.json(updated);
   });

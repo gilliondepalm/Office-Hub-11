@@ -68,6 +68,14 @@ const jobFunctionFormSchema = z.object({
   eindSchaal: z.string().optional(),
 });
 
+function parseSchaal(value: string | undefined | null): number | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  if (trimmed === "") return null;
+  const n = parseInt(trimmed, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 // ─── Dialogs ─────────────────────────────────────────────────────────────────
 
 function PermissionsDialog({
@@ -720,8 +728,8 @@ function FunctiesTab() {
         description: data.description || null,
         departmentId: data.departmentId && data.departmentId !== "none" ? data.departmentId : null,
         sortOrder: 0,
-        beginSchaal: data.beginSchaal || null,
-        eindSchaal: data.eindSchaal || null,
+        beginSchaal: parseSchaal(data.beginSchaal),
+        eindSchaal: parseSchaal(data.eindSchaal),
       });
     },
     onSuccess: () => {
@@ -751,8 +759,8 @@ function FunctiesTab() {
         name: data.name,
         description: data.description || null,
         departmentId: data.departmentId && data.departmentId !== "none" ? data.departmentId : null,
-        beginSchaal: data.beginSchaal || null,
-        eindSchaal: data.eindSchaal || null,
+        beginSchaal: parseSchaal(data.beginSchaal),
+        eindSchaal: parseSchaal(data.eindSchaal),
       });
     },
     onSuccess: () => {
