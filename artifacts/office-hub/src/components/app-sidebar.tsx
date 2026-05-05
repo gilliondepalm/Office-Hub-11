@@ -134,7 +134,15 @@ export function AppSidebar() {
                 size="icon"
                 variant="ghost"
                 className="text-sidebar-foreground/60"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); logout(); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  logout().catch(() => {
+                    // Local logout already happened in the auth provider;
+                    // server-side error is logged there. Nothing useful
+                    // to show in the UI at this point.
+                  });
+                }}
                 data-testid="button-logout"
               >
                 <LogOut className="h-4 w-4" />

@@ -171,7 +171,6 @@ function serveAdapterPath(
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     const sub = safeSubpath(req.path.replace(/^\//, ""));
     if (!sub) return res.status(400).json({ message: "Ongeldig pad" });
-    if (!sub) return next();
     try {
       const isPdf = opts?.pdfHeaders && sub.toLowerCase().endsWith(".pdf");
       const sendOpts = isPdf
@@ -319,10 +318,14 @@ export async function registerRoutes(
           message: "Wijzig eerst uw wachtwoord voordat u verder werkt.",
         });
       }
-    } catch {
-      // fall through; downstream will fail with its own error.
+      next();
+    } catch (err) {
+      // Fail closed: if we cannot determine whether the user must change
+      // their password (e.g. DB blip), block the request rather than
+      // letting them through unchecked. Log so operators see the cause.
+      req.log?.error({ err, userId }, "Password-change gate lookup failed");
+      res.status(500).json({ message: "Tijdelijke serverfout, probeer opnieuw." });
     }
-    next();
   });
 
   async function requireAdmin(req: any, res: any, next: any) {
@@ -428,17 +431,18 @@ export async function registerRoutes(
       res.json(list);
     } catch (err) {
       req.log?.error({ err }, "Failed to list aankondigingen");
-      res.json([]);
+      res.status(500).json({ message: "Lijst kon niet geladen worden" });
     }
   });
 
-  app.get("/api/uploads/wetgeving", requireAuth, async (_req, res) => {
+  app.get("/api/uploads/wetgeving", requireAuth, async (req, res) => {
     try {
       const list = await listPdfPrefix(PREFIX_WETGEVING, `/uploads/${PREFIX_WETGEVING}`);
       list.sort((a: any, b: any) => a.name.localeCompare(b.name));
       res.json(list);
-    } catch {
-      res.json([]);
+    } catch (err) {
+      req.log?.error({ err }, "Failed to list wetgeving");
+      res.status(500).json({ message: "Lijst kon niet geladen worden" });
     }
   });
 
@@ -456,13 +460,14 @@ export async function registerRoutes(
     res.json({ name: safeName, path: `/uploads/${PREFIX_WETGEVING}/${safeName}` });
   });
 
-  app.get("/api/uploads/cao", requireAuth, async (_req, res) => {
+  app.get("/api/uploads/cao", requireAuth, async (req, res) => {
     try {
       const list = await listPdfPrefix(PREFIX_CAO, `/uploads/${PREFIX_CAO}`);
       list.sort((a: any, b: any) => a.name.localeCompare(b.name));
       res.json(list);
-    } catch {
-      res.json([]);
+    } catch (err) {
+      req.log?.error({ err }, "Failed to list cao");
+      res.status(500).json({ message: "Lijst kon niet geladen worden" });
     }
   });
 
@@ -504,13 +509,14 @@ export async function registerRoutes(
     else res.status(404).json({ message: "Bestand niet gevonden" });
   });
 
-  app.get("/api/uploads/huishoudelijkreglement", requireAuth, async (_req, res) => {
+  app.get("/api/uploads/huishoudelijkreglement", requireAuth, async (req, res) => {
     try {
       const list = await listPdfPrefix(PREFIX_HUISHOUDELIJK, `/uploads/${PREFIX_HUISHOUDELIJK}`);
       list.sort((a: any, b: any) => a.name.localeCompare(b.name));
       res.json(list);
-    } catch {
-      res.json([]);
+    } catch (err) {
+      req.log?.error({ err }, "Failed to list huishoudelijkreglement");
+      res.status(500).json({ message: "Lijst kon niet geladen worden" });
     }
   });
 
@@ -540,13 +546,14 @@ export async function registerRoutes(
     else res.status(404).json({ message: "Bestand niet gevonden" });
   });
 
-  app.get("/api/uploads/nieuwsbrief", requireAuth, async (_req, res) => {
+  app.get("/api/uploads/nieuwsbrief", requireAuth, async (req, res) => {
     try {
       const list = await listPdfPrefix(PREFIX_NIEUWSBRIEF, `/uploads/${PREFIX_NIEUWSBRIEF}`);
       list.sort((a: any, b: any) => a.name.localeCompare(b.name));
       res.json(list);
-    } catch {
-      res.json([]);
+    } catch (err) {
+      req.log?.error({ err }, "Failed to list nieuwsbrief");
+      res.status(500).json({ message: "Lijst kon niet geladen worden" });
     }
   });
 
@@ -614,7 +621,7 @@ export async function registerRoutes(
       res.json(result);
     } catch (err) {
       req.log?.error({ err }, "Failed to list instructies");
-      res.json({});
+      res.status(500).json({ message: "Instructies konden niet geladen worden" });
     }
   });
 

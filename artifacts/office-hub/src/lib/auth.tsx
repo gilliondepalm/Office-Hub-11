@@ -47,12 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    let serverLogoutError: unknown = null;
     try {
       await apiRequest("POST", "/api/auth/logout");
-    } catch {}
+    } catch (err) {
+      // Server-side logout failed (network down, server error). We still
+      // clear local state so the user appears logged out, but we log and
+      // re-throw so the UI can show a warning — the server session may
+      // still be alive on a shared device.
+      serverLogoutError = err;
+      console.error("Server logout failed; local session cleared.", err);
+    }
     saveSessionToken(null);
     setUser(null);
     queryClient.clear();
+    if (serverLogoutError) {
+      throw serverLogoutError;
+    }
   };
 
   return (
