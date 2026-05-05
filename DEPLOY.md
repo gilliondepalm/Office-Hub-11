@@ -61,6 +61,63 @@ Kopieer `.env.example` en vul in. De belangrijkste variabelen:
 | `ADMIN_INITIAL_PASSWORD` | Wachtwoord voor 'admin' bij eerste opstart (lege DB)      |
 | `SAMPLE_USER_PASSWORD`   | Wachtwoord voor demo-gebruikers (alleen relevant in dev)  |
 
+### Object storage (S3-compatibel) — optioneel maar aanbevolen
+
+Stel **alleen `S3_BUCKET`** in om object storage te activeren. Zonder
+`S3_BUCKET` valt de server terug op de lokale schijf (`uploads/`).
+
+| Variabele                  | Beschrijving                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| `S3_BUCKET`                | Bucket-naam. **Aanwezigheid schakelt object storage in.**                          |
+| `S3_REGION`                | AWS region (bv. `eu-west-1`). Voor R2/B2: gebruik `auto`. Standaard `auto`.        |
+| `S3_ENDPOINT`              | Endpoint-URL voor niet-AWS providers (R2, B2, MinIO). Niet nodig voor AWS S3.      |
+| `S3_ACCESS_KEY_ID`         | Toegangs-sleutel. Op AWS kun je IAM rollen gebruiken en deze leeg laten.           |
+| `S3_SECRET_ACCESS_KEY`     | Geheime sleutel.                                                                   |
+| `S3_FORCE_PATH_STYLE`      | `"true"` voor providers die path-style URLs vereisen (MinIO). Auto bij endpoint.   |
+| `S3_PUBLIC_BASE_URL`       | Basis-URL als de bucket publiek is. Skipt presigned URLs en redirect direct.       |
+| `S3_PRESIGN_TTL_SECONDS`   | Levensduur van presigned URLs (standaard `3600`).                                  |
+
+**Voorbeeld — Cloudflare R2:**
+
+```
+S3_BUCKET=office-hub-uploads
+S3_REGION=auto
+S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+S3_ACCESS_KEY_ID=…
+S3_SECRET_ACCESS_KEY=…
+S3_PUBLIC_BASE_URL=https://uploads.office-hub.example.com   # optioneel
+```
+
+**Voorbeeld — Backblaze B2:**
+
+```
+S3_BUCKET=office-hub-uploads
+S3_REGION=us-west-002
+S3_ENDPOINT=https://s3.us-west-002.backblazeb2.com
+S3_ACCESS_KEY_ID=…
+S3_SECRET_ACCESS_KEY=…
+```
+
+**Voorbeeld — AWS S3:**
+
+```
+S3_BUCKET=office-hub-uploads
+S3_REGION=eu-west-1
+# S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY optioneel als IAM-rol aanwezig is
+```
+
+Migratie van bestaande lokale uploads naar je bucket — eenmalig:
+
+```bash
+# AWS CLI werkt ook tegen R2/B2 met --endpoint-url
+aws s3 cp artifacts/api-server/uploads/ s3://office-hub-uploads/ \
+  --recursive --endpoint-url https://<account>.r2.cloudflarestorage.com
+```
+
+De bestaande URL-paden (`/uploads/Aankondigingen/…`, `/uploads/CAO/…`,
+`/uploads/Instructies/Productie/…`, …) blijven werken: de server vertaalt
+`/uploads/<X>/<file>` automatisch naar `<X>/<file>` in de bucket.
+
 ### Web (build-tijd)
 
 | Variabele                | Beschrijving                                              |
@@ -171,19 +228,25 @@ De Express server dient nu:
 
 ---
 
-## 7. ⚠️ Bestanden / uploads — actie vereist
+## 7. Bestanden / uploads — kies één van twee opties
 
-**Belangrijk:** in deze codebase worden uploads (PDF's, foto's, beloningen,
-nieuwsbrieven, CAO-documenten, …) momenteel opgeslagen op de **lokale
-schijf** van de API server, in `artifacts/api-server/uploads/`.
+De API server heeft een ingebouwde **storage-adapter** met twee modi:
 
-Dit werkt **niet** op platforms zonder persistente schijf:
+### Optie 1 — Lokale schijf (default)
 
-* **Render Free** — schijf wordt bij elke deploy gewist.
-* **Fly.io / Heroku** — ephemerale containers; uploads verdwijnen bij restart.
-* **Railway / VPS** — werkt mits je een volume mount instelt.
+Zonder configuratie schrijft de server uploads naar
+`artifacts/api-server/uploads/`. Dit werkt:
 
-Voor productie buiten Replit raden we object storage aan (S3-compatible):
+* op een **VPS** of **Railway/Fly.io** met een gemount volume,
+* op **Render** als je een **Persistent Disk** koppelt op die map.
+
+Het werkt **niet** op ephemerale platforms (Render Free, Heroku) — bij
+elke deploy of restart verdwijnen de bestanden.
+
+### Optie 2 — Object storage (aanbevolen voor cloud)
+
+Stel `S3_BUCKET` in (zie sectie 3) en de server schakelt automatisch over
+naar S3-compatible storage. Geen code-wijziging nodig.
 
 | Provider           | Compatibel? | Kosten (richtprijs)            |
 | ------------------ | ----------- | ------------------------------ |
@@ -192,16 +255,18 @@ Voor productie buiten Replit raden we object storage aan (S3-compatible):
 | Backblaze B2       | ✅ S3 API   | $0.006/GB/maand                |
 | MinIO (self-hosted)| ✅ S3 API   | Gratis, je betaalt de server   |
 
-**Migratie naar object storage is een aparte werkpost** — er moeten
-upload-routes en serve-routes worden aangepast (o.a. `multer.diskStorage`
-vervangen door een S3 client, en `express.static` vervangen door een
-proxy of presigned URLs). Tijdelijk kun je een persistent volume gebruiken
-(Fly.io volumes, Railway volumes, of `/var/data` op een VPS) en later
-migreren.
+Hoe het werkt:
 
-Plaats de huidige uploads-map (`artifacts/api-server/uploads/`, ~51 MB)
-op die volume; de bestaande paden (`/uploads/Aankondigingen/...`,
-`/uploads/CAO/...`, …) blijven dan werken.
+* **Upload**: routes ontvangen het bestand in geheugen (multer
+  memoryStorage) en schrijven het via de adapter naar `<prefix>/<bestand>`
+  in de bucket.
+* **Serveren**: `/uploads/<prefix>/<bestand>` levert ofwel een
+  **HTTP 302 redirect** naar een presigned URL (TTL: `S3_PRESIGN_TTL_SECONDS`,
+  standaard 1u), of — als `S3_PUBLIC_BASE_URL` is ingesteld — een directe
+  redirect naar de publieke URL.
+
+> Bestaande URL-paden in de database blijven werken; de server mapt
+> `/uploads/Foo/bar.pdf` automatisch naar de S3-key `Foo/bar.pdf`.
 
 ---
 
@@ -311,15 +376,14 @@ Gebruik dit endpoint voor uptime monitoring (UptimeRobot, BetterStack, …).
 
 ## 12. Wat is er **niet** geregeld in deze release?
 
-Bewust uitgesteld — vereist een eigen task:
+Bewust uitgesteld — vereist een eigen task of externe configuratie:
 
-* **Object storage migratie** (zie sectie 7). Code-aanpassingen aan
-  upload-routes nodig, plus een data-kopie van de bestaande 51 MB.
-* **Geforceerd wachtwoord wijzigen na eerste login.** Voor nu is de
-  beveiliging dat het wachtwoord random is en éénmalig in de logs staat.
 * **Automatische rollback / blue-green deploys.** Afhankelijk van je host.
 * **Backups van de database.** Configureer dit bij je DB-provider
-  (Neon en Supabase doen dit automatisch).
+  (Neon en Supabase doen dit automatisch). Voor zelfgehoste DB: cron + `pg_dump`.
+* **CDN voor uploads.** Voor zware afbeelding-/PDF-traffic loont het om
+  Cloudflare of een CDN voor de bucket te zetten en `S3_PUBLIC_BASE_URL`
+  aan te wijzen op het CDN-domein.
 
 ---
 

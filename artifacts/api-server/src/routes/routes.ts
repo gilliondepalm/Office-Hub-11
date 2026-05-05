@@ -8,8 +8,12 @@ import bcrypt from "bcryptjs";
 import pgSession from "connect-pg-simple";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import crypto from "crypto";
+import {
+  getStorageAdapter,
+  persistUpload,
+  sanitizeOriginalFilename,
+} from "../lib/storage-adapter";
 import {
   insertUserSchema, insertEventSchema, insertAnnouncementSchema,
   insertDepartmentSchema, insertAbsenceSchema, insertRewardSchema,
@@ -45,10 +49,19 @@ import {
 
 const PgStore = pgSession(session);
 
-const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Storage prefixes used as keys/path-segments in both local-disk and S3 backends.
+const PREFIX_AANKONDIGINGEN = "Aankondigingen";
+const PREFIX_BELONING = "Beloning";
+const PREFIX_FUNCTIES = "Functies";
+const PREFIX_PASFOTO = "Pasfoto";
+const PREFIX_APP_PICS = "App_pics";
+const PREFIX_HUISHOUDELIJK = "Huishoudelijkreglement";
+const PREFIX_WETGEVING = "Wetgeving";
+const PREFIX_CAO = "CAO";
+const PREFIX_NIEUWSBRIEF = "Nieuwsbrief";
+const PREFIX_INSTRUCTIES = "Instructies";
+
+const storageAdapter = getStorageAdapter();
 
 function toIntOrNull(value: unknown): number | null {
   if (value === undefined || value === null || value === "") return null;
@@ -61,16 +74,9 @@ function toIntOrNull(value: unknown): number | null {
   return Number.isInteger(n) ? n : null;
 }
 
-function isWithinDir(dir: string, filePath: string): boolean {
-  const resolvedDir = path.resolve(dir);
-  const resolvedFile = path.resolve(filePath);
-  return resolvedFile === resolvedDir || resolvedFile.startsWith(resolvedDir + path.sep);
-}
-
-const aankondigingenDir = path.join(uploadsDir, "Aankondigingen");
-if (!fs.existsSync(aankondigingenDir)) {
-  fs.mkdirSync(aankondigingenDir, { recursive: true });
-}
+// All multer instances use memoryStorage. Files are persisted via the
+// storage adapter (local disk OR S3) inside each route handler with
+// `persistUpload(prefix, req.file, opts)`.
 
 const uploadCsv = multer({
   storage: multer.memoryStorage(),
@@ -81,16 +87,8 @@ const uploadCsv = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-const pdfStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, aankondigingenDir),
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"));
-  },
-});
-
 const uploadPdf = multer({
-  storage: pdfStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     if (file.mimetype === "application/pdf") {
       cb(null, true);
@@ -101,26 +99,8 @@ const uploadPdf = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-const beloningDir = path.join(uploadsDir, "Beloning");
-if (!fs.existsSync(beloningDir)) {
-  fs.mkdirSync(beloningDir, { recursive: true });
-}
-
-const functiesDir = path.join(uploadsDir, "Functies");
-if (!fs.existsSync(functiesDir)) {
-  fs.mkdirSync(functiesDir, { recursive: true });
-}
-
-const functiesStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, functiesDir),
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"));
-  },
-});
-
 const uploadFunctie = multer({
-  storage: functiesStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     const allowed = ["application/pdf", "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -134,16 +114,8 @@ const uploadFunctie = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-const beloningStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, beloningDir),
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"));
-  },
-});
-
 const uploadBeloning = multer({
-  storage: beloningStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -154,26 +126,8 @@ const uploadBeloning = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-const pasfotoDir = path.join(uploadsDir, "Pasfoto");
-if (!fs.existsSync(pasfotoDir)) {
-  fs.mkdirSync(pasfotoDir, { recursive: true });
-}
-
-const huishoudelijkDir = path.join(uploadsDir, "Huishoudelijkreglement");
-if (!fs.existsSync(huishoudelijkDir)) {
-  fs.mkdirSync(huishoudelijkDir, { recursive: true });
-}
-
-const pasfotoStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, pasfotoDir),
-  filename: (req: any, file, cb) => {
-    const ext = path.extname(file.originalname) || ".jpg";
-    cb(null, `user-${req.params?.id || Date.now()}${ext}`);
-  },
-});
-
 const uploadPasfoto = multer({
-  storage: pasfotoStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("image/")) { cb(null, true); }
     else { cb(new Error("Alleen afbeeldingen zijn toegestaan")); }
@@ -181,21 +135,8 @@ const uploadPasfoto = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-const appPicsDir = path.join(uploadsDir, "App_pics");
-if (!fs.existsSync(appPicsDir)) {
-  fs.mkdirSync(appPicsDir, { recursive: true });
-}
-
-const imageStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, appPicsDir),
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"));
-  },
-});
-
 const uploadImage = multer({
-  storage: imageStorage,
+  storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -205,6 +146,49 @@ const uploadImage = multer({
   },
   limits: { fileSize: 10 * 1024 * 1024 },
 });
+
+const uploadPdfOnly = (): multer.Multer =>
+  multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (_req: any, file: any, cb: any) => {
+      if (file.mimetype === "application/pdf") cb(null, true);
+      else cb(new Error("Alleen PDF-bestanden"));
+    },
+    limits: { fileSize: 50 * 1024 * 1024 },
+  });
+
+function safeSubpath(input: string): string | null {
+  const cleaned = input.replace(/\\/g, "/").replace(/^\/+/, "");
+  if (cleaned.split("/").some((p) => p === ".." || p === "")) return null;
+  return cleaned;
+}
+
+function serveAdapterPath(
+  prefix: string,
+  opts?: { pdfHeaders?: boolean; auth?: any },
+) {
+  const handler = async (req: any, res: any, next: any) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const sub = safeSubpath(req.path.replace(/^\//, ""));
+    if (!sub) return res.status(400).json({ message: "Ongeldig pad" });
+    if (!sub) return next();
+    try {
+      const isPdf = opts?.pdfHeaders && sub.toLowerCase().endsWith(".pdf");
+      const sendOpts = isPdf
+        ? { contentType: "application/pdf", inline: true }
+        : undefined;
+      const found = await storageAdapter.send(res, `${prefix}/${sub}`, sendOpts);
+      if (!found) {
+        if (!res.headersSent) {
+          res.status(404).json({ message: "Bestand niet gevonden" });
+        }
+      }
+    } catch (err) {
+      next(err);
+    }
+  };
+  return opts?.auth ? [opts.auth, handler] : [handler];
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -306,6 +290,36 @@ export async function registerRoutes(
     next();
   }
 
+  // Forced-password-change gate: when a user has `mustChangePassword`,
+  // every /api/* call other than the small allow-list returns 403 with
+  // a machine-readable code so the web/mobile clients can redirect to
+  // the change-password screen.
+  const PWD_CHANGE_ALLOWLIST = new Set<string>([
+    "/api/auth/me",
+    "/api/auth/logout",
+    "/api/auth/change-password",
+    "/api/auth/login",
+    "/api/auth/request-reset",
+  ]);
+  app.use("/api", async (req: any, res, next) => {
+    if (req.method === "OPTIONS") return next();
+    if (PWD_CHANGE_ALLOWLIST.has(req.path)) return next();
+    const userId = (req.session as any)?.userId;
+    if (!userId) return next();
+    try {
+      const user = await storage.getUser(userId);
+      if (user && (user as any).mustChangePassword) {
+        return res.status(403).json({
+          code: "PASSWORD_CHANGE_REQUIRED",
+          message: "Wijzig eerst uw wachtwoord voordat u verder werkt.",
+        });
+      }
+    } catch {
+      // fall through; downstream will fail with its own error.
+    }
+    next();
+  });
+
   async function requireAdmin(req: any, res: any, next: any) {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ message: "Niet ingelogd" });
@@ -329,92 +343,101 @@ export async function registerRoutes(
 
   const express = await import("express");
 
+  // /PDF/* — bundled static PDFs shipped in the repo (not user uploads).
   app.use("/PDF", express.default.static(path.join(process.cwd(), "PDF")));
 
-  app.use("/uploads/App_pics", express.default.static(appPicsDir));
-  app.use("/uploads/Beloning", express.default.static(beloningDir));
-  app.use("/uploads/Functies", express.default.static(functiesDir));
-  app.use("/uploads/Pasfoto", express.default.static(pasfotoDir));
-  app.use("/uploads/Huishoudelijkreglement", express.default.static(huishoudelijkDir));
+  // Public asset serves (no auth) — wired through the storage adapter.
+  app.use("/uploads/App_pics", ...serveAdapterPath(PREFIX_APP_PICS));
+  app.use("/uploads/Beloning", ...serveAdapterPath(PREFIX_BELONING));
+  app.use("/uploads/Functies", ...serveAdapterPath(PREFIX_FUNCTIES));
+  app.use("/uploads/Pasfoto", ...serveAdapterPath(PREFIX_PASFOTO));
+  app.use(
+    "/uploads/Huishoudelijkreglement",
+    ...serveAdapterPath(PREFIX_HUISHOUDELIJK),
+  );
 
-  app.get("/uploads/public/:filename", (req, res) => {
+  // /uploads/public/:filename — public access to specific root-level files.
+  app.get("/uploads/public/:filename", async (req, res, next) => {
     const filename = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, "");
-    const filePath = path.join(uploadsDir, filename);
-    if (!isWithinDir(uploadsDir, filePath) || !fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "Bestand niet gevonden" });
-    }
-    res.sendFile(filePath);
-  });
-
-  app.use("/uploads", requireAuth, (req, res, next) => {
-    if (req.path.endsWith(".pdf")) {
-      const filePath = path.join(uploadsDir, req.path);
-      if (isWithinDir(uploadsDir, filePath) && fs.existsSync(filePath)) {
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", "inline");
-        res.setHeader("X-Frame-Options", "SAMEORIGIN");
-        res.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
-        return res.sendFile(filePath);
+    if (!filename) return res.status(404).json({ message: "Bestand niet gevonden" });
+    try {
+      const found = await storageAdapter.send(res, filename);
+      if (!found && !res.headersSent) {
+        res.status(404).json({ message: "Bestand niet gevonden" });
       }
+    } catch (err) {
+      next(err);
     }
-    next();
-  }, express.default.static(uploadsDir));
+  });
 
-  app.post("/api/upload/pdf", requireAuth, uploadPdf.single("pdf"), (req: any, res) => {
+  // Auth-required catch-all for /uploads/<anything>. PDFs get inline-display headers.
+  app.use("/uploads", requireAuth, async (req: any, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const sub = safeSubpath(req.path.replace(/^\//, ""));
+    if (!sub) return next();
+    const isPdf = sub.toLowerCase().endsWith(".pdf");
+    try {
+      const sendOpts = isPdf
+        ? { contentType: "application/pdf", inline: true }
+        : undefined;
+      const found = await storageAdapter.send(res, sub, sendOpts);
+      if (!found && !res.headersSent) {
+        res.status(404).json({ message: "Bestand niet gevonden" });
+      }
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/upload/pdf", requireAuth, uploadPdf.single("pdf"), async (req: any, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "Geen PDF-bestand ontvangen" });
     }
-    const pdfUrl = `/uploads/Aankondigingen/${req.file.filename}`;
-    res.json({ pdfUrl });
+    const filename = await persistUpload(PREFIX_AANKONDIGINGEN, req.file);
+    res.json({ pdfUrl: `/uploads/${PREFIX_AANKONDIGINGEN}/${filename}` });
   });
 
-  const wetgevingDir = path.join(uploadsDir, "Wetgeving");
-  if (!fs.existsSync(wetgevingDir)) {
-    fs.mkdirSync(wetgevingDir, { recursive: true });
+  // Helper: list a single-prefix directory of PDFs.
+  async function listPdfPrefix(prefix: string, urlPrefix: string) {
+    const entries = await storageAdapter.list(prefix);
+    return entries
+      .filter((e) => e.name.toLowerCase().endsWith(".pdf"))
+      .map((e) => ({
+        name: e.name,
+        path: `${urlPrefix}/${e.name}`,
+        size: e.size,
+        modified: e.modified,
+      }));
   }
 
-  app.get("/api/uploads/list", requireAuth, (_req, res) => {
+  app.get("/api/uploads/list", requireAuth, async (req, res) => {
     try {
-      const files = fs.readdirSync(uploadsDir)
-        .filter((f: string) => f.toLowerCase().endsWith(".pdf"))
-        .map((f: string) => {
-          const stat = fs.statSync(path.join(uploadsDir, f));
-          return { name: f, path: `/uploads/${f}`, size: stat.size, modified: stat.mtime };
-        })
-        .sort((a: any, b: any) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
-      res.json(files);
+      const list = await listPdfPrefix(
+        PREFIX_AANKONDIGINGEN,
+        `/uploads/${PREFIX_AANKONDIGINGEN}`,
+      );
+      list.sort(
+        (a: any, b: any) =>
+          new Date(b.modified).getTime() - new Date(a.modified).getTime(),
+      );
+      res.json(list);
+    } catch (err) {
+      (req as any).log?.error({ err }, "Failed to list aankondigingen");
+      res.json([]);
+    }
+  });
+
+  app.get("/api/uploads/wetgeving", requireAuth, async (_req, res) => {
+    try {
+      const list = await listPdfPrefix(PREFIX_WETGEVING, `/uploads/${PREFIX_WETGEVING}`);
+      list.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      res.json(list);
     } catch {
       res.json([]);
     }
   });
 
-  app.get("/api/uploads/wetgeving", requireAuth, (_req, res) => {
-    try {
-      const files = fs.readdirSync(wetgevingDir)
-        .filter((f: string) => f.toLowerCase().endsWith(".pdf"))
-        .map((f: string) => {
-          const stat = fs.statSync(path.join(wetgevingDir, f));
-          return { name: f, path: `/uploads/Wetgeving/${f}`, size: stat.size, modified: stat.mtime };
-        })
-        .sort((a: any, b: any) => a.name.localeCompare(b.name));
-      res.json(files);
-    } catch {
-      res.json([]);
-    }
-  });
-
-  const wetgevingUpload = multer({
-    storage: multer.diskStorage({
-      destination: (_req: any, _file: any, cb: any) => cb(null, wetgevingDir),
-      filename: (_req: any, file: any, cb: any) => cb(null, file.originalname),
-    }),
-    fileFilter: (_req: any, file: any, cb: any) => {
-      if (file.mimetype === "application/pdf") cb(null, true);
-      else cb(new Error("Alleen PDF-bestanden"));
-    },
-  });
-
-  app.post("/api/uploads/wetgeving", requireAuth, wetgevingUpload.single("pdf"), async (req: any, res) => {
+  app.post("/api/uploads/wetgeving", requireAuth, uploadPdfOnly().single("pdf"), async (req: any, res) => {
     const userId = (req.session as any).userId;
     const user = await storage.getUser(userId);
     if (!user || !isAdminRole(user.role)) {
@@ -423,41 +446,22 @@ export async function registerRoutes(
     if (!req.file) {
       return res.status(400).json({ message: "Geen PDF-bestand ontvangen" });
     }
-    res.json({ name: req.file.originalname, path: `/uploads/Wetgeving/${req.file.originalname}` });
+    const safeName = sanitizeOriginalFilename(req.file.originalname);
+    await persistUpload(PREFIX_WETGEVING, req.file, { fixedName: safeName });
+    res.json({ name: safeName, path: `/uploads/${PREFIX_WETGEVING}/${safeName}` });
   });
 
-  const caoDir = path.join(uploadsDir, "CAO");
-  if (!fs.existsSync(caoDir)) {
-    fs.mkdirSync(caoDir, { recursive: true });
-  }
-
-  app.get("/api/uploads/cao", requireAuth, (_req, res) => {
+  app.get("/api/uploads/cao", requireAuth, async (_req, res) => {
     try {
-      const files = fs.readdirSync(caoDir)
-        .filter((f: string) => f.toLowerCase().endsWith(".pdf"))
-        .map((f: string) => {
-          const stat = fs.statSync(path.join(caoDir, f));
-          return { name: f, path: `/uploads/CAO/${f}`, size: stat.size, modified: stat.mtime };
-        })
-        .sort((a: any, b: any) => a.name.localeCompare(b.name));
-      res.json(files);
+      const list = await listPdfPrefix(PREFIX_CAO, `/uploads/${PREFIX_CAO}`);
+      list.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      res.json(list);
     } catch {
       res.json([]);
     }
   });
 
-  const caoUpload = multer({
-    storage: multer.diskStorage({
-      destination: (_req: any, _file: any, cb: any) => cb(null, caoDir),
-      filename: (_req: any, file: any, cb: any) => cb(null, file.originalname),
-    }),
-    fileFilter: (_req: any, file: any, cb: any) => {
-      if (file.mimetype === "application/pdf") cb(null, true);
-      else cb(new Error("Alleen PDF-bestanden"));
-    },
-  });
-
-  app.post("/api/uploads/cao", requireAuth, caoUpload.single("pdf"), async (req: any, res) => {
+  app.post("/api/uploads/cao", requireAuth, uploadPdfOnly().single("pdf"), async (req: any, res) => {
     const userId = (req.session as any).userId;
     const user = await storage.getUser(userId);
     if (!user || !isAdminRole(user.role)) {
@@ -466,7 +470,9 @@ export async function registerRoutes(
     if (!req.file) {
       return res.status(400).json({ message: "Geen PDF-bestand ontvangen" });
     }
-    res.json({ name: req.file.originalname, path: `/uploads/CAO/${req.file.originalname}` });
+    const safeName = sanitizeOriginalFilename(req.file.originalname);
+    await persistUpload(PREFIX_CAO, req.file, { fixedName: safeName });
+    res.json({ name: safeName, path: `/uploads/${PREFIX_CAO}/${safeName}` });
   });
 
   app.delete("/api/uploads/cao/:filename", requireAuth, async (req: any, res) => {
@@ -476,14 +482,9 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Alleen beheerders" });
     }
     const filename = req.params.filename.replace(/[^a-zA-Z0-9._\- ]/g, "");
-    const filePath = path.join(caoDir, filename);
-    if (!isWithinDir(caoDir, filePath)) return res.status(400).json({ message: "Ongeldig bestandspad" });
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ message: "Verwijderd" });
-    } else {
-      res.status(404).json({ message: "Bestand niet gevonden" });
-    }
+    const ok = await storageAdapter.delete(`${PREFIX_CAO}/${filename}`);
+    if (ok) res.json({ message: "Verwijderd" });
+    else res.status(404).json({ message: "Bestand niet gevonden" });
   });
 
   app.delete("/api/uploads/wetgeving/:filename", requireAuth, async (req: any, res) => {
@@ -493,43 +494,22 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Alleen beheerders" });
     }
     const filename = req.params.filename.replace(/[^a-zA-Z0-9._\- ]/g, "");
-    const filePath = path.join(wetgevingDir, filename);
-    if (!isWithinDir(wetgevingDir, filePath)) return res.status(400).json({ message: "Ongeldig bestandspad" });
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ message: "Verwijderd" });
-    } else {
-      res.status(404).json({ message: "Bestand niet gevonden" });
-    }
+    const ok = await storageAdapter.delete(`${PREFIX_WETGEVING}/${filename}`);
+    if (ok) res.json({ message: "Verwijderd" });
+    else res.status(404).json({ message: "Bestand niet gevonden" });
   });
 
-  app.get("/api/uploads/huishoudelijkreglement", requireAuth, (_req, res) => {
+  app.get("/api/uploads/huishoudelijkreglement", requireAuth, async (_req, res) => {
     try {
-      const files = fs.readdirSync(huishoudelijkDir)
-        .filter((f: string) => f.toLowerCase().endsWith(".pdf"))
-        .map((f: string) => {
-          const stat = fs.statSync(path.join(huishoudelijkDir, f));
-          return { name: f, path: `/uploads/Huishoudelijkreglement/${f}`, size: stat.size, modified: stat.mtime };
-        })
-        .sort((a: any, b: any) => a.name.localeCompare(b.name));
-      res.json(files);
+      const list = await listPdfPrefix(PREFIX_HUISHOUDELIJK, `/uploads/${PREFIX_HUISHOUDELIJK}`);
+      list.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      res.json(list);
     } catch {
       res.json([]);
     }
   });
 
-  const huishoudelijkUpload = multer({
-    storage: multer.diskStorage({
-      destination: (_req: any, _file: any, cb: any) => cb(null, huishoudelijkDir),
-      filename: (_req: any, file: any, cb: any) => cb(null, file.originalname),
-    }),
-    fileFilter: (_req: any, file: any, cb: any) => {
-      if (file.mimetype === "application/pdf") cb(null, true);
-      else cb(new Error("Alleen PDF-bestanden"));
-    },
-  });
-
-  app.post("/api/uploads/huishoudelijkreglement", requireAuth, huishoudelijkUpload.single("pdf"), async (req: any, res) => {
+  app.post("/api/uploads/huishoudelijkreglement", requireAuth, uploadPdfOnly().single("pdf"), async (req: any, res) => {
     const userId = (req.session as any).userId;
     const user = await storage.getUser(userId);
     if (!user || !isAdminRole(user.role)) {
@@ -538,7 +518,9 @@ export async function registerRoutes(
     if (!req.file) {
       return res.status(400).json({ message: "Geen PDF-bestand ontvangen" });
     }
-    res.json({ name: req.file.originalname, path: `/uploads/Huishoudelijkreglement/${req.file.originalname}` });
+    const safeName = sanitizeOriginalFilename(req.file.originalname);
+    await persistUpload(PREFIX_HUISHOUDELIJK, req.file, { fixedName: safeName });
+    res.json({ name: safeName, path: `/uploads/${PREFIX_HUISHOUDELIJK}/${safeName}` });
   });
 
   app.delete("/api/uploads/huishoudelijkreglement/:filename", requireAuth, async (req: any, res) => {
@@ -548,48 +530,22 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Alleen beheerders" });
     }
     const filename = req.params.filename.replace(/[^a-zA-Z0-9._\- ]/g, "");
-    const filePath = path.join(huishoudelijkDir, filename);
-    if (!isWithinDir(huishoudelijkDir, filePath)) return res.status(400).json({ message: "Ongeldig bestandspad" });
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ message: "Verwijderd" });
-    } else {
-      res.status(404).json({ message: "Bestand niet gevonden" });
-    }
+    const ok = await storageAdapter.delete(`${PREFIX_HUISHOUDELIJK}/${filename}`);
+    if (ok) res.json({ message: "Verwijderd" });
+    else res.status(404).json({ message: "Bestand niet gevonden" });
   });
 
-  const nieuwsbriefDir = path.join(uploadsDir, "Nieuwsbrief");
-  if (!fs.existsSync(nieuwsbriefDir)) {
-    fs.mkdirSync(nieuwsbriefDir, { recursive: true });
-  }
-
-  app.get("/api/uploads/nieuwsbrief", requireAuth, (_req, res) => {
+  app.get("/api/uploads/nieuwsbrief", requireAuth, async (_req, res) => {
     try {
-      const files = fs.readdirSync(nieuwsbriefDir)
-        .filter((f: string) => f.toLowerCase().endsWith(".pdf"))
-        .map((f: string) => {
-          const stat = fs.statSync(path.join(nieuwsbriefDir, f));
-          return { name: f, path: `/uploads/Nieuwsbrief/${f}`, size: stat.size, modified: stat.mtime };
-        })
-        .sort((a: any, b: any) => a.name.localeCompare(b.name));
-      res.json(files);
+      const list = await listPdfPrefix(PREFIX_NIEUWSBRIEF, `/uploads/${PREFIX_NIEUWSBRIEF}`);
+      list.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      res.json(list);
     } catch {
       res.json([]);
     }
   });
 
-  const nieuwsbriefUpload = multer({
-    storage: multer.diskStorage({
-      destination: (_req: any, _file: any, cb: any) => cb(null, nieuwsbriefDir),
-      filename: (_req: any, file: any, cb: any) => cb(null, file.originalname),
-    }),
-    fileFilter: (_req: any, file: any, cb: any) => {
-      if (file.mimetype === "application/pdf") cb(null, true);
-      else cb(new Error("Alleen PDF-bestanden"));
-    },
-  });
-
-  app.post("/api/uploads/nieuwsbrief", requireAuth, nieuwsbriefUpload.single("pdf"), async (req: any, res) => {
+  app.post("/api/uploads/nieuwsbrief", requireAuth, uploadPdfOnly().single("pdf"), async (req: any, res) => {
     const userId = (req.session as any).userId;
     const user = await storage.getUser(userId);
     if (!user || !isAdminRole(user.role)) {
@@ -598,7 +554,9 @@ export async function registerRoutes(
     if (!req.file) {
       return res.status(400).json({ message: "Geen PDF-bestand ontvangen" });
     }
-    res.json({ name: req.file.originalname, path: `/uploads/Nieuwsbrief/${req.file.originalname}` });
+    const safeName = sanitizeOriginalFilename(req.file.originalname);
+    await persistUpload(PREFIX_NIEUWSBRIEF, req.file, { fixedName: safeName });
+    res.json({ name: safeName, path: `/uploads/${PREFIX_NIEUWSBRIEF}/${safeName}` });
   });
 
   app.delete("/api/uploads/nieuwsbrief/:filename", requireAuth, async (req: any, res) => {
@@ -608,20 +566,10 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Alleen beheerders" });
     }
     const filename = req.params.filename.replace(/[^a-zA-Z0-9._\- ]/g, "");
-    const filePath = path.join(nieuwsbriefDir, filename);
-    if (!isWithinDir(nieuwsbriefDir, filePath)) return res.status(400).json({ message: "Ongeldig bestandspad" });
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ message: "Verwijderd" });
-    } else {
-      res.status(404).json({ message: "Bestand niet gevonden" });
-    }
+    const ok = await storageAdapter.delete(`${PREFIX_NIEUWSBRIEF}/${filename}`);
+    if (ok) res.json({ message: "Verwijderd" });
+    else res.status(404).json({ message: "Bestand niet gevonden" });
   });
-
-  const instructiesDir = path.join(uploadsDir, "Instructies");
-  if (!fs.existsSync(instructiesDir)) {
-    fs.mkdirSync(instructiesDir, { recursive: true });
-  }
 
   app.get("/api/uploads/instructies", requireAuth, async (req: any, res) => {
     const userId = (req.session as any).userId;
@@ -629,26 +577,29 @@ export async function registerRoutes(
     if (!user) return res.status(401).json({ message: "Niet ingelogd" });
 
     try {
-      const allDepts = fs.readdirSync(instructiesDir, { withFileTypes: true })
-        .filter((d: any) => d.isDirectory())
-        .map((d: any) => d.name)
-        .sort();
+      // Discover department sub-prefixes via the storage adapter — works
+      // identically on local fs and S3.
+      const candidateDepts = new Set<string>(
+        await storageAdapter.listCommonPrefixes(PREFIX_INSTRUCTIES),
+      );
 
-      const visibleDepts = isAdminRole(user.role)
-        ? allDepts
-        : allDepts.filter((d: string) => d === user.department);
+      const visibleDepts = (isAdminRole(user.role)
+        ? Array.from(candidateDepts)
+        : Array.from(candidateDepts).filter((d) => d === user.department)
+      ).sort();
 
       const result: Record<string, any[]> = {};
       for (const dept of visibleDepts) {
-        const deptPath = path.join(instructiesDir, dept);
-        const files = fs.readdirSync(deptPath)
-          .filter((f: string) => f.toLowerCase().endsWith(".pdf"))
-          .map((f: string) => {
-            const stat = fs.statSync(path.join(deptPath, f));
-            return { name: f, path: `/uploads/Instructies/${dept}/${f}`, size: stat.size, modified: stat.mtime };
-          })
-          .sort((a: any, b: any) => a.name.localeCompare(b.name));
-        result[dept] = files;
+        const files = await storageAdapter.list(`${PREFIX_INSTRUCTIES}/${dept}`);
+        result[dept] = files
+          .filter((f) => f.name.toLowerCase().endsWith(".pdf"))
+          .map((f) => ({
+            name: f.name,
+            path: `/uploads/${PREFIX_INSTRUCTIES}/${dept}/${f.name}`,
+            size: f.size,
+            modified: f.modified,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
       }
 
       if (!isAdminRole(user.role) && user.department && !result[user.department]) {
@@ -656,29 +607,13 @@ export async function registerRoutes(
       }
 
       res.json(result);
-    } catch {
+    } catch (err) {
+      (req as any).log?.error({ err }, "Failed to list instructies");
       res.json({});
     }
   });
 
-  const instructiesUpload = multer({
-    storage: multer.diskStorage({
-      destination: (req: any, _file: any, cb: any) => {
-        const dept = req.params.department.replace(/[^a-zA-Z0-9 _-]/g, "");
-        const deptPath = path.join(instructiesDir, dept);
-        if (!isWithinDir(instructiesDir, deptPath)) return cb(new Error("Ongeldig pad"));
-        if (!fs.existsSync(deptPath)) fs.mkdirSync(deptPath, { recursive: true });
-        cb(null, deptPath);
-      },
-      filename: (_req: any, file: any, cb: any) => cb(null, file.originalname),
-    }),
-    fileFilter: (_req: any, file: any, cb: any) => {
-      if (file.mimetype === "application/pdf") cb(null, true);
-      else cb(new Error("Alleen PDF-bestanden"));
-    },
-  });
-
-  app.post("/api/uploads/instructies/:department", requireAuth, instructiesUpload.single("pdf"), async (req: any, res) => {
+  app.post("/api/uploads/instructies/:department", requireAuth, uploadPdfOnly().single("pdf"), async (req: any, res) => {
     const userId = (req.session as any).userId;
     const user = await storage.getUser(userId);
     if (!user || !isAdminRole(user.role)) {
@@ -688,7 +623,10 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Geen PDF-bestand ontvangen" });
     }
     const dept = req.params.department.replace(/[^a-zA-Z0-9 _-]/g, "");
-    res.json({ name: req.file.originalname, path: `/uploads/Instructies/${dept}/${req.file.originalname}` });
+    if (!dept) return res.status(400).json({ message: "Ongeldige afdeling" });
+    const safeName = sanitizeOriginalFilename(req.file.originalname);
+    await persistUpload(`${PREFIX_INSTRUCTIES}/${dept}`, req.file, { fixedName: safeName });
+    res.json({ name: safeName, path: `/uploads/${PREFIX_INSTRUCTIES}/${dept}/${safeName}` });
   });
 
   app.delete("/api/uploads/instructies/:department/:filename", requireAuth, async (req: any, res) => {
@@ -699,14 +637,10 @@ export async function registerRoutes(
     }
     const dept = req.params.department.replace(/[^a-zA-Z0-9 _-]/g, "");
     const filename = req.params.filename.replace(/[^a-zA-Z0-9._\- ]/g, "");
-    const filePath = path.join(instructiesDir, dept, filename);
-    if (!isWithinDir(instructiesDir, filePath)) return res.status(400).json({ message: "Ongeldig bestandspad" });
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ message: "Verwijderd" });
-    } else {
-      res.status(404).json({ message: "Bestand niet gevonden" });
-    }
+    if (!dept || !filename) return res.status(400).json({ message: "Ongeldig bestandspad" });
+    const ok = await storageAdapter.delete(`${PREFIX_INSTRUCTIES}/${dept}/${filename}`);
+    if (ok) res.json({ message: "Verwijderd" });
+    else res.status(404).json({ message: "Bestand niet gevonden" });
   });
 
   app.post("/api/auth/request-reset", authLimiter, async (req, res) => {
@@ -806,7 +740,10 @@ export async function registerRoutes(
       const valid = await bcrypt.compare(currentPassword, user.password);
       if (!valid) return res.status(400).json({ message: "Huidig wachtwoord is onjuist" });
       const hashed = await bcrypt.hash(newPassword, 12);
-      await storage.updateUser(userId, { password: hashed });
+      await storage.updateUser(userId, {
+        password: hashed,
+        mustChangePassword: false,
+      } as any);
       res.json({ message: "Wachtwoord succesvol gewijzigd" });
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Fout bij wijzigen wachtwoord" });
@@ -972,7 +909,10 @@ export async function registerRoutes(
   }, async (req: any, res: any) => {
     try {
       if (!req.file) return res.status(400).json({ message: "Geen bestand geüpload" });
-      const avatarPath = `/uploads/Pasfoto/${req.file.filename}`;
+      const ext = path.extname(req.file.originalname) || ".jpg";
+      const fixedName = `user-${req.params?.id || Date.now()}${ext}`;
+      await persistUpload(PREFIX_PASFOTO, req.file, { fixedName });
+      const avatarPath = `/uploads/${PREFIX_PASFOTO}/${fixedName}`;
       const user = await storage.updateUser(req.params.id, { avatar: avatarPath } as any);
       const { password: _, ...safeUser } = user;
       res.json(safeUser);
@@ -1919,7 +1859,11 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Alleen admin/directeur" });
     }
     try {
-      const photoUrl = req.file ? `/uploads/Beloning/${req.file.filename}` : null;
+      let photoUrl: string | null = null;
+      if (req.file) {
+        const fname = await persistUpload(PREFIX_BELONING, req.file);
+        photoUrl = `/uploads/${PREFIX_BELONING}/${fname}`;
+      }
       const award = await storage.createYearlyAward({
         year: parseInt(req.body.year),
         type: req.body.type,
@@ -2011,7 +1955,8 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Alleen admin/directeur" });
     }
     if (!req.file) return res.status(400).json({ message: "Geen bestand geüpload" });
-    const filePath = `/uploads/Functies/${req.file.filename}`;
+    const fname = await persistUpload(PREFIX_FUNCTIES, req.file);
+    const filePath = `/uploads/${PREFIX_FUNCTIES}/${fname}`;
     const updated = await storage.updateJobFunction(req.params.id, { descriptionFilePath: filePath });
     res.json(updated);
   });
@@ -2475,12 +2420,17 @@ export async function registerRoutes(
       if (!user || !isAdminRole(user.role)) {
         return res.status(403).json({ message: "Alleen beheerders" });
       }
+      let pdfUrl: string | null = req.body.pdfUrl || null;
+      if (req.file) {
+        const fname = await persistUpload(PREFIX_AANKONDIGINGEN, req.file);
+        pdfUrl = `/uploads/${PREFIX_AANKONDIGINGEN}/${fname}`;
+      }
       const body = {
         title: req.body.title,
         url: req.body.url || "",
         description: req.body.description || null,
         category: req.body.category,
-        pdfUrl: req.file ? `/uploads/${req.file.filename}` : (req.body.pdfUrl || null),
+        pdfUrl,
       };
       const parsed = insertLegislationLinkSchema.parse(body);
       const link = await storage.createLegislationLink(parsed);
@@ -2555,7 +2505,8 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ message: "Geen afbeelding geüpload" });
       }
-      const photoUrl = `/uploads/App_pics/${req.file.filename}`;
+      const fname = await persistUpload(PREFIX_APP_PICS, req.file);
+      const photoUrl = `/uploads/${PREFIX_APP_PICS}/${fname}`;
       await storage.setSiteSetting("dashboard_photo", photoUrl);
       res.json({ value: photoUrl });
     } catch (err: any) {
@@ -2563,19 +2514,7 @@ export async function registerRoutes(
     }
   });
 
-  const uploadLoginPhoto = multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, appPicsDir),
-      filename: (_req, _file, cb) => cb(null, "login.png"),
-    }),
-    fileFilter: (_req, file, cb) => {
-      if (file.mimetype.startsWith("image/")) cb(null, true);
-      else cb(new Error("Alleen afbeeldingen zijn toegestaan"));
-    },
-    limits: { fileSize: 10 * 1024 * 1024 },
-  });
-
-  app.post("/api/site-settings/login-photo", requireAuth, uploadLoginPhoto.single("photo"), async (req, res) => {
+  app.post("/api/site-settings/login-photo", requireAuth, uploadImage.single("photo"), async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const user = await storage.getUser(userId);
@@ -2585,7 +2524,8 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ message: "Geen afbeelding geüpload" });
       }
-      const photoUrl = `/uploads/App_pics/login.png`;
+      await persistUpload(PREFIX_APP_PICS, req.file, { fixedName: "login.png" });
+      const photoUrl = `/uploads/${PREFIX_APP_PICS}/login.png`;
       await storage.setSiteSetting("login_photo", photoUrl);
       res.json({ value: photoUrl });
     } catch (err: any) {
@@ -2603,7 +2543,8 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ message: "Geen afbeelding geüpload" });
       }
-      const photoUrl = `/uploads/App_pics/${req.file.filename}`;
+      const fname = await persistUpload(PREFIX_APP_PICS, req.file);
+      const photoUrl = `/uploads/${PREFIX_APP_PICS}/${fname}`;
       await storage.setSiteSetting("rapporten_photo", photoUrl);
       res.json({ value: photoUrl });
     } catch (err: any) {
@@ -2611,19 +2552,7 @@ export async function registerRoutes(
     }
   });
 
-  const uploadProductiePhoto = multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, appPicsDir),
-      filename: (_req, _file, cb) => cb(null, "productie.png"),
-    }),
-    fileFilter: (_req, file, cb) => {
-      if (file.mimetype.startsWith("image/")) cb(null, true);
-      else cb(new Error("Alleen afbeeldingen zijn toegestaan"));
-    },
-    limits: { fileSize: 10 * 1024 * 1024 },
-  });
-
-  app.post("/api/site-settings/productie-photo", requireAuth, uploadProductiePhoto.single("photo"), async (req, res) => {
+  app.post("/api/site-settings/productie-photo", requireAuth, uploadImage.single("photo"), async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const user = await storage.getUser(userId);
@@ -2633,7 +2562,8 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ message: "Geen afbeelding geüpload" });
       }
-      const photoUrl = `/uploads/App_pics/productie.png`;
+      await persistUpload(PREFIX_APP_PICS, req.file, { fixedName: "productie.png" });
+      const photoUrl = `/uploads/${PREFIX_APP_PICS}/productie.png`;
       await storage.setSiteSetting("productie_photo", photoUrl);
       res.json({ value: photoUrl });
     } catch (err: any) {
@@ -3584,8 +3514,7 @@ export async function registerRoutes(
       if (!file) return res.status(400).json({ message: "Geen bestand ontvangen" });
 
       const bestandsnaam = file.originalname;
-      const rawText: string = file.buffer?.toString("utf-8") ?? fs.readFileSync(file.path, "utf-8");
-      if (file.path) try { fs.unlinkSync(file.path); } catch {}
+      const rawText: string = file.buffer.toString("utf-8");
 
       // ── CSV parsen ──────────────────────────────────────────────────────────
       const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);

@@ -36,7 +36,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "https://workspace-gilliondepalm.replit.app"
+      "apiUrl": "https://api.office-hub.example.com"
     }
   }
 }

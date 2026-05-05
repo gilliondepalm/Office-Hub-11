@@ -60,8 +60,9 @@ export async function seedDatabase() {
       startDate: new Date().toISOString().slice(0, 10),
       endDate: null,
       birthDate: null,
+      mustChangePassword: true,
     });
-    console.log("[SEED] Productie bootstrap voltooid (alleen admin-account aangemaakt).");
+    console.log("[SEED] Productie bootstrap voltooid (alleen admin-account aangemaakt; wachtwoord moet bij eerste login gewijzigd worden).");
     return;
   }
 
