@@ -109,9 +109,17 @@ S3_REGION=eu-west-1
 Migratie van bestaande lokale uploads naar je bucket — eenmalig:
 
 ```bash
-# AWS CLI werkt ook tegen R2/B2 met --endpoint-url
-aws s3 cp artifacts/api-server/uploads/ s3://office-hub-uploads/ \
-  --recursive --endpoint-url https://<account>.r2.cloudflarestorage.com
+# Met de meegeleverde script (gebruikt dezelfde S3_* env-variabelen):
+S3_BUCKET=office-hub-uploads \
+S3_REGION=auto \
+S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com \
+S3_ACCESS_KEY_ID=… \
+S3_SECRET_ACCESS_KEY=… \
+pnpm --filter @workspace/scripts run migrate-uploads-to-s3 -- --dry-run
+
+# Verwijder --dry-run om daadwerkelijk te uploaden.
+# Voeg --overwrite toe om bestaande objecten te overschrijven (default: skippen).
+# Voeg --source=/pad/naar/uploads toe als de bron-map elders staat.
 ```
 
 De bestaande URL-paden (`/uploads/Aankondigingen/…`, `/uploads/CAO/…`,

@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "migrate-uploads-to-s3": "tsx ./src/migrate-uploads-to-s3.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1041.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

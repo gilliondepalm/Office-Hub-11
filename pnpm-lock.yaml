@@ -820,6 +820,10 @@ importers:
         version: 0.31.9
 
   scripts:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1041.0
+        version: 3.1041.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

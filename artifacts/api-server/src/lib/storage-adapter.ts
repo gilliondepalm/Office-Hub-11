@@ -328,11 +328,34 @@ export function getStorageAdapter(): StorageAdapter {
       "Storage backend: S3",
     );
   } else {
-    const baseDir = path.join(process.cwd(), "uploads");
+    // Resolve a deterministic uploads directory. Operators can force a path
+    // with UPLOADS_DIR (absolute or relative to cwd). Without it we pick
+    // the canonical `artifacts/api-server/uploads`, working both when cwd
+    // is the repo root (production per DEPLOY.md) and when cwd is the
+    // api-server artifact directory (local dev workflow).
+    const override = process.env.UPLOADS_DIR;
+    let baseDir: string;
+    if (override) {
+      baseDir = path.isAbsolute(override)
+        ? override
+        : path.resolve(process.cwd(), override);
+    } else {
+      const fromRepoRoot = path.resolve(
+        process.cwd(),
+        "artifacts/api-server/uploads",
+      );
+      const fromArtifactDir = path.resolve(process.cwd(), "uploads");
+      const cwdEndsInArtifact = process
+        .cwd()
+        .replace(/\\/g, "/")
+        .endsWith("/artifacts/api-server");
+      baseDir = cwdEndsInArtifact ? fromArtifactDir : fromRepoRoot;
+    }
     cached = new LocalFsAdapter(baseDir);
     if (process.env.NODE_ENV === "production") {
       logger.warn(
-        "Storage backend: lokale schijf (uploads/). Stel S3_BUCKET in voor cloud storage. Bestanden gaan verloren bij redeploy op hosters zonder persistente schijf.",
+        { baseDir },
+        "Storage backend: lokale schijf. Stel S3_BUCKET in voor cloud storage. Bestanden gaan verloren bij redeploy op hosters zonder persistente schijf.",
       );
     } else {
       logger.info({ baseDir }, "Storage backend: lokale schijf");
