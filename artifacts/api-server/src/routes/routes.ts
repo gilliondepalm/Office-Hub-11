@@ -211,9 +211,16 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && !process.env.SESSION_SECRET) {
+    throw new Error(
+      "SESSION_SECRET is verplicht in productie. Stel deze omgevingsvariabele in (lange willekeurige string).",
+    );
+  }
   const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
   if (!process.env.SESSION_SECRET) {
-    console.warn("[SECURITY] SESSION_SECRET is niet ingesteld. Een tijdelijke sleutel wordt gebruikt. Stel SESSION_SECRET in als omgevingsvariabele voor productie.");
+    console.warn(
+      "[SECURITY] SESSION_SECRET is niet ingesteld. Een tijdelijke sleutel wordt gebruikt voor development. Stel SESSION_SECRET in voor productie.",
+    );
   }
 
   // Allow native clients (Expo Go) to authenticate via an explicit

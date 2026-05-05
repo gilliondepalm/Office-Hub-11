@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { db } from "./db";
 import { users } from "@workspace/db";
 
@@ -7,12 +8,67 @@ const ALL_MODULES = ["dashboard", "kalender", "aankondigingen", "organisatie", "
 const MANAGER_MODULES = ["dashboard", "kalender", "aankondigingen", "organisatie", "personalia", "verzuim", "beloningen", "applicaties"];
 const EMPLOYEE_MODULES = ["dashboard", "kalender", "aankondigingen", "verzuim", "beloningen"];
 
+const isProduction = process.env.NODE_ENV === "production";
+
+function resolveAdminPassword(): { password: string; generated: boolean } {
+  const fromEnv = process.env.ADMIN_INITIAL_PASSWORD;
+  if (fromEnv && fromEnv.length >= 8) {
+    return { password: fromEnv, generated: false };
+  }
+  if (isProduction) {
+    const generated = crypto.randomBytes(18).toString("base64url");
+    return { password: generated, generated: true };
+  }
+  return { password: "admin123", generated: false };
+}
+
 export async function seedDatabase() {
   const existingUsers = await storage.getUsers();
   if (existingUsers.length > 0) return;
 
-  const hashedAdmin = await bcrypt.hash("admin123", 10);
-  const hashedUser = await bcrypt.hash("user123", 10);
+  const adminPwd = resolveAdminPassword();
+  const hashedAdmin = await bcrypt.hash(adminPwd.password, 10);
+
+  if (adminPwd.generated) {
+    console.warn(
+      "============================================================\n" +
+        "[BOOTSTRAP] Geen ADMIN_INITIAL_PASSWORD ingesteld in productie.\n" +
+        `Tijdelijk admin-wachtwoord: ${adminPwd.password}\n` +
+        "Log in als 'admin' en wijzig dit wachtwoord onmiddellijk.\n" +
+        "============================================================",
+    );
+  } else if (!process.env.ADMIN_INITIAL_PASSWORD && !isProduction) {
+    console.warn(
+      "[SEED] Standaard development admin-wachtwoord 'admin123' gebruikt. Stel ADMIN_INITIAL_PASSWORD in voor productie.",
+    );
+  }
+
+  // In productie maken we ALLEEN het admin-account aan. Demo-medewerkers
+  // (manager, pieter, sophie, …) zijn ontwikkel-/testdata en mogen nooit
+  // op een productie-systeem terechtkomen met een voorspelbaar wachtwoord.
+  if (isProduction) {
+    await storage.createUser({
+      username: "admin",
+      password: hashedAdmin,
+      fullName: "Beheerder",
+      email: "admin@office-hub.local",
+      role: "admin",
+      department: "IT",
+      avatar: null,
+      active: true,
+      permissions: ALL_MODULES,
+      startDate: new Date().toISOString().slice(0, 10),
+      endDate: null,
+      birthDate: null,
+    });
+    console.log("[SEED] Productie bootstrap voltooid (alleen admin-account aangemaakt).");
+    return;
+  }
+
+  const hashedUser = await bcrypt.hash(
+    process.env.SAMPLE_USER_PASSWORD || "user123",
+    10,
+  );
 
   const admin = await storage.createUser({
     username: "admin",

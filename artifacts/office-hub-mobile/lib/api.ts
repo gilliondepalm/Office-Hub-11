@@ -6,6 +6,7 @@ import { enqueue } from "./offlineQueue";
 const TOKEN_KEY = "officehub.session.token";
 
 const ENV_DOMAIN = process.env.EXPO_PUBLIC_DOMAIN;
+const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type ExtraConfig = { apiUrl?: unknown } & Record<string, unknown>;
 
@@ -49,6 +50,9 @@ function deriveFromHost(host: string | undefined | null): string | null {
 }
 
 function resolveApiBase(): string {
+  if (ENV_API_URL) {
+    return ENV_API_URL.trim().replace(/\/+$/, "");
+  }
   if (ENV_DOMAIN) return `https://${ENV_DOMAIN}`;
 
   // EAS production builds (no Expo dev server, no window in the native shell):

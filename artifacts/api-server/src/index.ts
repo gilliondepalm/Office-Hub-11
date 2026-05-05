@@ -1,7 +1,9 @@
 import http from "http";
+import path from "path";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { registerRoutes } from "./routes/routes";
+import { serveStatic } from "./static";
 
 const rawPort = process.env["PORT"];
 
@@ -21,6 +23,15 @@ const httpServer = http.createServer(app);
 
 registerRoutes(httpServer, app)
   .then(() => {
+    const webDir = process.env["SERVE_WEB_DIR"];
+    if (webDir) {
+      const resolvedWebDir = path.isAbsolute(webDir)
+        ? webDir
+        : path.resolve(process.cwd(), webDir);
+      serveStatic(app, resolvedWebDir);
+      logger.info({ webDir: resolvedWebDir }, "Web app static files served");
+    }
+
     httpServer.listen(port, () => {
       logger.info({ port }, "Server listening");
     });

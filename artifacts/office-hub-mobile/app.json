@@ -24,7 +24,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://office-hub.example.com/"
         }
       ],
       "expo-font",

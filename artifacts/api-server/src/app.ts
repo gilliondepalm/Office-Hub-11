@@ -6,6 +6,29 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+const isProductionEnv = process.env["NODE_ENV"] === "production";
+const rawAllowedOrigins = process.env["CORS_ALLOWED_ORIGINS"];
+const allowedOrigins = rawAllowedOrigins
+  ? rawAllowedOrigins
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : null;
+
+if (isProductionEnv && (!allowedOrigins || allowedOrigins.length === 0)) {
+  throw new Error(
+    "CORS_ALLOWED_ORIGINS is verplicht in productie. Stel een komma-gescheiden lijst van toegestane origins in (bv. https://office-hub.example.com).",
+  );
+}
+
+if (allowedOrigins) {
+  logger.info({ allowedOrigins }, "CORS allowlist actief");
+} else {
+  logger.warn(
+    "CORS_ALLOWED_ORIGINS niet ingesteld — alle origins worden toegestaan (development mode).",
+  );
+}
+
 app.use(
   pinoHttp({
     logger,
@@ -27,7 +50,12 @@ app.use(
 );
 app.use(
   cors({
-    origin: (origin, cb) => cb(null, origin || true),
+    origin: (origin, cb) => {
+      if (!allowedOrigins) return cb(null, origin || true);
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`CORS: origin '${origin}' niet toegestaan`));
+    },
     credentials: true,
   }),
 );
