@@ -294,12 +294,17 @@ export async function registerRoutes(
   // every /api/* call other than the small allow-list returns 403 with
   // a machine-readable code so the web/mobile clients can redirect to
   // the change-password screen.
+  //
+  // Important: this middleware is mounted on `/api`, so within the
+  // handler `req.path` is the path *relative to that mount* (e.g.
+  // `/auth/change-password`, NOT `/api/auth/change-password`). The
+  // allow-list therefore stores the un-prefixed paths.
   const PWD_CHANGE_ALLOWLIST = new Set<string>([
-    "/api/auth/me",
-    "/api/auth/logout",
-    "/api/auth/change-password",
-    "/api/auth/login",
-    "/api/auth/request-reset",
+    "/auth/me",
+    "/auth/logout",
+    "/auth/change-password",
+    "/auth/login",
+    "/auth/request-reset",
   ]);
   app.use("/api", async (req: any, res, next) => {
     if (req.method === "OPTIONS") return next();
