@@ -878,6 +878,9 @@ function FunctioneringForm({ users, currentUser }: { users?: User[]; currentUser
           updatedAt: viewingReview?.updatedAt || null,
           medewerker: viewingReview?.medewerker || formData.medewerker,
         } as FunctioneringReview} />
+        <div className="mt-8 pt-3 border-t border-gray-400 text-xs text-gray-600 text-center" data-testid="text-print-functionering-footer">
+          Afgedrukt op: {new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 print:hidden">
@@ -1948,6 +1951,9 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
             </div>
           </CardContent>
         </Card>
+        <div className="mt-8 pt-3 border-t border-gray-400 text-xs text-gray-600 text-center" data-testid="text-print-beoordeling-footer">
+          Afgedrukt op: {new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}
+        </div>
       </div>
 
       {canEdit && (
