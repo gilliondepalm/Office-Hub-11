@@ -1,68 +1,38 @@
-# Workspace
+# Kantoor Dashboard
 
 ## Overview
+The Kantoor Dashboard is a comprehensive office management application designed to streamline various administrative and operational tasks within an organization. It features 9 core modules, robust permission management, and aims to centralize office operations for improved efficiency and communication. The project's vision is to provide a single source of truth for employees and management, fostering transparency and reducing manual overheads. Its market potential lies in any organization seeking an all-in-one solution for employee management, internal communication, and performance tracking.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## User Preferences
+I want iterative development and clear communication. Please ask before making major architectural changes or decisions that impact the user experience significantly. I prefer detailed explanations for complex features or changes.
 
-## Stack
+## System Architecture
+The application is built using a modern full-stack architecture:
+- **Frontend**: React with TypeScript, styled using Tailwind CSS and shadcn/ui components for a consistent and modern UI/UX. The design prioritizes clear navigation and responsive layouts. PageHero components are used across major modules for consistent branding and visual appeal, with images served statically from `uploads/App_pics/`.
+- **Backend**: Express.js with TypeScript, providing a RESTful API.
+- **Database**: PostgreSQL, managed with Drizzle ORM for type-safe database interactions.
+- **Authentication**: Session-based authentication is implemented with secure bcrypt password hashing (12 rounds). Security features include Helmet middleware, rate limiting, and secure HTTP-only session cookies. Password reset is admin-initiated to prevent enumeration attacks.
+- **Authorization**: Granular, module-level access control is managed via a `permissions` text array stored on user records. Roles include `directeur`, `admin`, `manager`, `manager_az`, and `employee`, each with predefined access levels and specific helper functions for advanced permissions (e.g., `isAdminRole()`, `canManageVacation()`).
+- **Module Design**: The system is organized into eleven distinct modules: Dashboard, Evenementen Kalender, Aankondigingen, Organisatie, Personalia, Verzuim, Beloningen, Applicaties, Rapporten, Beheer, and Mijn Profiel. Each module addresses specific office functions, from event management and announcements to performance reviews and extensive reporting.
+- **Key Features**:
+    - **Event Management**: Supports various event categories, official holiday uploads, and notification badges.
+    - **Announcements**: Features priority levels, pinning, PDF attachments, and direct messaging.
+    - **Organizational Structure**: Manages departments, AO-Procedures (step-by-step instructions), an organogram, CAO info, and legalislation links.
+    - **Absence Management**: Includes an approval workflow, BVVD reasons, detailed vacation day balance tracking, and "snipperdagen" (mandatory days off).
+    - **Performance & Rewards**: Integrates Functioneringsgesprekken (performance reviews), Beoordelingsgesprekken (competency-based assessments with configurable competencies per job role), Jaarplan (yearly departmental planning with activities and sub-sections), and yearly awards.
+    - **Reporting**: Provides printable reports for employee information, birthdays, anniversaries, and status.
+    - **Admin Controls**: Offers comprehensive user and module permission management, department/job function CRUD, and Prikklok (time clock) CSV import with user verification.
+    - **Productivity Statistics**: Includes a "Productiestatistieken" module with multiple tabs (BalieMedewerker, BalieM3, TrendOrAlgemeen, TrendOrNotaris, TrendKartografen, Landmeters) for tracking various operational metrics. Data is fetched live from the DB or falls back to seeded historical data. CSV import functionality is available for admins/managers.
+    - **Monthly Production Module**: Dedicated sections for "Productie Kartografen" and "Productie Landmeters" allow detailed input of individual monthly production metrics, syncing data to historical trends and other related tables.
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **Build**: esbuild (ESM bundle for api-server), Vite v7 (office-hub)
-
-## Artifacts
-
-### Office Hub (`artifacts/office-hub/`) — port 23442
-- React + Vite + Tailwind CSS v3 web app
-- Dutch-language HR/office management system
-- Preview path: `/`
-- Uses relative `/api/*` calls to the API server (proxied via reverse proxy)
-- **PWA** enabled via `vite-plugin-pwa` (autoUpdate service worker, Workbox precaching, Google Fonts runtime cache). Icons are SVGs in `public/`.
-
-### Office Hub Mobile (`artifacts/office-hub-mobile/`) — port 22654
-- Expo (React Native) app mirroring the web app's branding (green #27865A, dark sidebar #213B2F, yellow #FACC14)
-- Tabs: Dashboard, Werktijden, Verzuim, Beloningen, Persoonlijk
-- Calls the same `/api/*` endpoints as the web app via `EXPO_PUBLIC_DOMAIN`
-- `metro.config.js` has a `blockList` excluding `.vite/` and `dist/` dirs from other artifacts to prevent Metro crash on ephemeral Vite cache files
-- Auth via signed `X-Session-Token` header (server returns it in login response when `X-Client: mobile`); token stored in `AsyncStorage` (`lib/api.ts`)
-- **Offline queue** (`lib/offlineQueue.ts`, `lib/OfflineQueueContext.tsx`): Failed POST/PUT/DELETE/PATCH requests (except `/api/auth/*`) are automatically queued in AsyncStorage when a network error occurs. Queued requests are replayed automatically when connectivity is restored (polled every 5s). A `QueuedOfflineError` is thrown so callers can handle the queued state gracefully. UI indicators: `ConnectionLostBanner` shows pending count when offline; `PendingQueueBadge` shows a floating badge when items are queued but the banner is dismissed.
-- Brand assets in `assets/brand/` mirrored from api-server `uploads/App_pics/`
-- **API base URL resolution** (`lib/api.ts` → `resolveApiBase()`), in order:
-  1. `EXPO_PUBLIC_DOMAIN` env var, if set — explicit override (any environment)
-  2. In production builds (`!__DEV__`, e.g. EAS Store builds): `expo.extra.apiUrl` from `app.json` — points at the published api-server (default: `https://workspace-gilliondepalm.replit.app`)
-  3. Web preview (Expo for Web): derived from `window.location.hostname` (maps the `.expo.` Replit dev host back to the matching API host)
-  4. Expo Go on a phone: derived from the dev server `hostUri` reported by `expo-constants`
-- The api-server is the production target for `expo.extra.apiUrl`. Its production deploy is configured in `artifacts/api-server/.replit-artifact/artifact.toml` (autoscale, build via esbuild, run via `node dist/index.mjs`, health probe `/api/healthz`). After the user clicks Publish, confirm the resulting `.replit.app` domain matches `expo.extra.apiUrl` (or update `app.json` and rebuild the mobile app).
-
-### API Server (`artifacts/api-server/`) — port 8080
-- Express 5 + Drizzle ORM + PostgreSQL
-- Routes: `src/routes/routes.ts` — 3927-line legacy `registerRoutes` function
-- Paths served: `/api`, `/uploads`, `/PDF`
-- Session auth via `express-session` + `connect-pg-simple`
-- `X-Session-Token` header bridge (read pre-session, re-injected as `connect.sid` cookie) used by web (inside Replit iframe where Chrome blocks third-party cookies) and mobile clients
-- Login returns `sessionToken` in body when `X-Client: web` or `X-Client: mobile` header is present
-- File uploads via `multer` (pasfoto, beloningen, functies, aankondigingen, CSV)
-
-### Shared Libraries
-- `lib/db/` — Drizzle schema + DB connection (`@workspace/db`)
-
-## Key Commands
-
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
-- `pnpm --filter @workspace/office-hub run dev` — run frontend locally
-
-## Migration Notes (from `.migration-backup/`)
-
-- Original monolithic Express + Vite app split into two artifacts
-- Frontend type imports from `@shared/schema` → `src/lib/shared-schema.ts` (frontend-safe copy)
-- Backend uses `@workspace/db` for database schema and connection
-- DB tables already migrated; all 49 tables present in PostgreSQL
-- Admin credentials: username `admin`, password `admin123`
-
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## External Dependencies
+- **PostgreSQL**: Primary database for all application data.
+- **Drizzle ORM**: Used for interacting with the PostgreSQL database.
+- **React**: Frontend library for building the user interface.
+- **TypeScript**: Adds static typing to both frontend and backend code.
+- **Tailwind CSS**: Utility-first CSS framework for styling.
+- **shadcn/ui**: Component library for UI elements.
+- **Express.js**: Backend web application framework.
+- **bcrypt**: For password hashing.
+- **Helmet**: Middleware for securing HTTP headers.
+- **Zod**: Schema declaration and validation library, used in `shared/schema.ts`.

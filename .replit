@@ -1,51 +1,44 @@
-modules = ["nodejs-24", "python-3.11", "postgresql-16"]
-
-[deployment]
-router = "application"
-deploymentTarget = "autoscale"
-
-[deployment.postBuild]
-args = ["pnpm", "store", "prune"]
-env = { "CI" = "true" }
-
-[workflows]
-runButton = "Project"
-
-[agent]
-stack = "PNPM_WORKSPACE"
-expertMode = true
-
-[postMerge]
-path = "scripts/post-merge.sh"
-timeoutMs = 20000
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
-channel = "stable-25_05"
+channel = "stable-24_05"
+packages = ["gt"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 8080
-externalPort = 8080
+[env]
+PORT = "5000"
 
-[[ports]]
-localPort = 8081
-externalPort = 8081
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "./dist/index.cjs"]
+build = ["npm", "run", "build"]
 
-[[ports]]
-localPort = 8082
-externalPort = 3002
+[workflows]
+runButton = "Project"
 
-[[ports]]
-localPort = 22654
-externalPort = 3001
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
 
-[[ports]]
-localPort = 22655
-externalPort = 3003
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
 
-[[ports]]
-localPort = 23442
-externalPort = 3000
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
