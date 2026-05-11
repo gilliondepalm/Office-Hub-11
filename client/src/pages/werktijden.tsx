@@ -1857,16 +1857,13 @@ export default function WerktijdenPage() {
                     onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
                   >Maand</button>
                 </div>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={filterDatumMode === "dag" ? "date" : "month"}
-                    className="pl-9 w-44"
-                    value={filterDatum}
-                    onChange={(e) => setFilterDatum(e.target.value)}
-                    data-testid="input-filter-datum"
-                  />
-                </div>
+                <Input
+                  type={filterDatumMode === "dag" ? "date" : "month"}
+                  className={filterDatumMode === "dag" ? "w-40" : "w-36"}
+                  value={filterDatum}
+                  onChange={(e) => setFilterDatum(e.target.value)}
+                  data-testid="input-filter-datum"
+                />
               </div>
               {isManager && (
                 <Button
@@ -2058,16 +2055,13 @@ export default function WerktijdenPage() {
                     onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
                   >Maand</button>
                 </div>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type={filterDatumMode === "dag" ? "date" : "month"}
-                    className="pl-9 w-44"
-                    value={filterDatum}
-                    onChange={(e) => setFilterDatum(e.target.value)}
-                    data-testid="input-filter-datum-sessies"
-                  />
-                </div>
+                <Input
+                  type={filterDatumMode === "dag" ? "date" : "month"}
+                  className={filterDatumMode === "dag" ? "w-40" : "w-36"}
+                  value={filterDatum}
+                  onChange={(e) => setFilterDatum(e.target.value)}
+                  data-testid="input-filter-datum-sessies"
+                />
               </div>
               <span className="text-sm text-muted-foreground ml-1">
                 {filteredSessies.length} sessies
