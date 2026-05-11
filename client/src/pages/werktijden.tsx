@@ -1847,13 +1847,13 @@ export default function WerktijdenPage() {
                 </div>
               )}
               <div className="flex items-center gap-1.5">
-                <div className="flex items-center rounded-md border overflow-hidden text-xs">
+                <div className="flex items-center rounded-md border overflow-hidden text-xs shrink-0">
                   <button
-                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "dag" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    className={`px-2.5 py-1.5 font-medium whitespace-nowrap transition-colors ${filterDatumMode === "dag" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                     onClick={() => { setFilterDatumMode("dag"); setFilterDatum(""); }}
                   >Dag</button>
                   <button
-                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    className={`px-2.5 py-1.5 font-medium whitespace-nowrap transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                     onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
                   >Maand</button>
                 </div>
@@ -2045,13 +2045,13 @@ export default function WerktijdenPage() {
                 </div>
               )}
               <div className="flex items-center gap-1.5">
-                <div className="flex items-center rounded-md border overflow-hidden text-xs">
+                <div className="flex items-center rounded-md border overflow-hidden text-xs shrink-0">
                   <button
-                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "dag" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    className={`px-2.5 py-1.5 font-medium whitespace-nowrap transition-colors ${filterDatumMode === "dag" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                     onClick={() => { setFilterDatumMode("dag"); setFilterDatum(""); }}
                   >Dag</button>
                   <button
-                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    className={`px-2.5 py-1.5 font-medium whitespace-nowrap transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                     onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
                   >Maand</button>
                 </div>
