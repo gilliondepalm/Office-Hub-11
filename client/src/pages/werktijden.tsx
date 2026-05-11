@@ -1854,7 +1854,7 @@ export default function WerktijdenPage() {
                   >Dag</button>
                   <button
                     className={`px-2.5 py-1.5 font-medium whitespace-nowrap transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                    onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
+                    onClick={() => { setFilterDatumMode("maand"); setFilterDatum(format(new Date(), "yyyy-MM")); }}
                   >Maand</button>
                 </div>
                 <Input
@@ -2052,7 +2052,7 @@ export default function WerktijdenPage() {
                   >Dag</button>
                   <button
                     className={`px-2.5 py-1.5 font-medium whitespace-nowrap transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                    onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
+                    onClick={() => { setFilterDatumMode("maand"); setFilterDatum(format(new Date(), "yyyy-MM")); }}
                   >Maand</button>
                 </div>
                 <Input
