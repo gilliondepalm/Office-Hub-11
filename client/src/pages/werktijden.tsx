@@ -872,6 +872,7 @@ export default function WerktijdenPage() {
   const [filterUserid, setFilterUserid] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDatum, setFilterDatum] = useState("");
+  const [filterDatumMode, setFilterDatumMode] = useState<"dag" | "maand">("dag");
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   const [deleteConfirmImport, setDeleteConfirmImport] = useState<ImportLogEntry | null>(null);
   const [analyseUserId, setAnalyseUserId]         = useState("");
@@ -1845,15 +1846,27 @@ export default function WerktijdenPage() {
                   <span className="font-medium">{(user as any)?.fullName || user?.username}</span>
                 </div>
               )}
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  className="pl-9 w-44"
-                  value={filterDatum}
-                  onChange={(e) => setFilterDatum(e.target.value)}
-                  data-testid="input-filter-datum"
-                />
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center rounded-md border overflow-hidden text-xs">
+                  <button
+                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "dag" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    onClick={() => { setFilterDatumMode("dag"); setFilterDatum(""); }}
+                  >Dag</button>
+                  <button
+                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
+                  >Maand</button>
+                </div>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type={filterDatumMode === "dag" ? "date" : "month"}
+                    className="pl-9 w-44"
+                    value={filterDatum}
+                    onChange={(e) => setFilterDatum(e.target.value)}
+                    data-testid="input-filter-datum"
+                  />
+                </div>
               </div>
               {isManager && (
                 <Button
@@ -2034,15 +2047,27 @@ export default function WerktijdenPage() {
                   <span className="font-medium">{(user as any)?.fullName || user?.username}</span>
                 </div>
               )}
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  className="pl-9 w-44"
-                  value={filterDatum}
-                  onChange={(e) => setFilterDatum(e.target.value)}
-                  data-testid="input-filter-datum-sessies"
-                />
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center rounded-md border overflow-hidden text-xs">
+                  <button
+                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "dag" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    onClick={() => { setFilterDatumMode("dag"); setFilterDatum(""); }}
+                  >Dag</button>
+                  <button
+                    className={`px-2 py-1.5 font-medium transition-colors ${filterDatumMode === "maand" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                    onClick={() => { setFilterDatumMode("maand"); setFilterDatum(""); }}
+                  >Maand</button>
+                </div>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type={filterDatumMode === "dag" ? "date" : "month"}
+                    className="pl-9 w-44"
+                    value={filterDatum}
+                    onChange={(e) => setFilterDatum(e.target.value)}
+                    data-testid="input-filter-datum-sessies"
+                  />
+                </div>
               </div>
               <span className="text-sm text-muted-foreground ml-1">
                 {filteredSessies.length} sessies
