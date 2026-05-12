@@ -278,7 +278,7 @@ export default function JaarverslagPage() {
   );
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="h-full overflow-auto">
       <PageHero
         title="Jaarverslag"
         subtitle="Personeels- en verzuimstatistieken"
