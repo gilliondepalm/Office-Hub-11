@@ -1316,7 +1316,7 @@ export default function PersonaliaPage() {
       <PageHero
         title="Personalia"
         subtitle={canEditPersonalia ? "Overzicht van alle medewerkers" : "Uw persoonlijke gegevens"}
-        imageSrc="/uploads/App_pics/personalia.png"
+        imageSrc="/uploads/App_pics/personalia.jpg"
         imageAlt="personalia"
       />
       <div className="p-6 space-y-6">

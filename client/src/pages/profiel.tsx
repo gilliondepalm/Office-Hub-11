@@ -92,7 +92,7 @@ export default function ProfielPage() {
       <PageHero
         title="Mijn Profiel"
         subtitle="Uw persoonlijke gegevens en overzicht"
-        imageSrc="/uploads/App_pics/profiel.png"
+        imageSrc="/uploads/App_pics/profiel.jpg"
         imageAlt="profiel"
       />
       <div className="p-6 space-y-6">

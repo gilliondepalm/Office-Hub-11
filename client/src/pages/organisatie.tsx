@@ -1247,7 +1247,7 @@ export default function OrganisatiePage() {
       <PageHero
         title="Organisatie"
         subtitle="Afdelingen, procedures, organogram en wetgeving"
-        imageSrc="/uploads/App_pics/organisatie.png"
+        imageSrc="/uploads/App_pics/organisatie.jpg"
         imageAlt="organisatie"
       />
       <div className="p-6 space-y-6">

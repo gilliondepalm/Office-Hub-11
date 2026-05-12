@@ -396,7 +396,7 @@ function RechtenTab() {
           <div className="flex items-center gap-4">
             <div className="relative w-48 h-28 rounded-lg overflow-hidden border border-border bg-muted shrink-0">
               <img
-                src={loginPhoto?.value || "/uploads/App_pics/login.png"}
+                src={loginPhoto?.value || "/uploads/App_pics/login.jpg"}
                 alt="Inlogpagina achtergrond"
                 className="w-full h-full object-cover"
                 data-testid="img-login-photo-preview"
@@ -404,7 +404,7 @@ function RechtenTab() {
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Deze afbeelding wordt getoond als achtergrond op de inlogpagina. Wordt opgeslagen als <code className="text-xs bg-muted px-1 rounded">uploads/App_pics/login.png</code>.</p>
+              <p className="text-sm text-muted-foreground">Deze afbeelding wordt getoond als achtergrond op de inlogpagina. Wordt opgeslagen als <code className="text-xs bg-muted px-1 rounded">uploads/App_pics/login.jpg</code>.</p>
               <input ref={loginPhotoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLoginPhotoMutation.mutate(f); }} data-testid="input-login-photo" />
               <Button variant="outline" size="sm" className="gap-2" onClick={() => loginPhotoInputRef.current?.click()} disabled={uploadLoginPhotoMutation.isPending} data-testid="button-change-login-photo">
                 <Camera className="h-4 w-4" />
@@ -424,7 +424,7 @@ function RechtenTab() {
           <div className="flex items-center gap-4">
             <div className="relative w-48 h-28 rounded-lg overflow-hidden border border-border bg-muted shrink-0">
               <img
-                src={rapportenPhoto?.value || "/uploads/App_pics/rapporten.png"}
+                src={rapportenPhoto?.value || "/uploads/App_pics/rapporten.jpg"}
                 alt="Rapporten achtergrond"
                 className="w-full h-full object-cover"
                 data-testid="img-rapporten-photo-preview"
@@ -466,7 +466,7 @@ function RechtenTab() {
           <div className="flex items-center gap-4">
             <div className="relative w-48 h-28 rounded-lg overflow-hidden border border-border bg-muted shrink-0">
               <img
-                src={productiePhoto?.value || "/uploads/App_pics/productie.png"}
+                src={productiePhoto?.value || "/uploads/App_pics/productie.jpg"}
                 alt="Productie achtergrond"
                 className="w-full h-full object-cover"
                 data-testid="img-productie-photo-preview"
@@ -474,7 +474,7 @@ function RechtenTab() {
               />
             </div>
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Deze afbeelding wordt getoond als hero-achtergrond op de Productie pagina. Wordt opgeslagen als <code className="text-xs bg-muted px-1 rounded">uploads/App_pics/productie.png</code>.</p>
+              <p className="text-sm text-muted-foreground">Deze afbeelding wordt getoond als hero-achtergrond op de Productie pagina. Wordt opgeslagen als <code className="text-xs bg-muted px-1 rounded">uploads/App_pics/productie.jpg</code>.</p>
               <input
                 ref={productiePhotoInputRef}
                 type="file"
@@ -1454,7 +1454,7 @@ export default function BeheerPage() {
       <PageHero
         title="Beheer"
         subtitle="Beheer gebruikersrechten, afdelingen en functies"
-        imageSrc="/uploads/App_pics/beheer.png"
+        imageSrc="/uploads/App_pics/beheer.jpg"
         imageAlt="beheer"
       />
       <div className="p-6 space-y-6">

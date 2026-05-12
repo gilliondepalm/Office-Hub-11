@@ -1590,7 +1590,7 @@ export default function VerzuimPage() {
       <PageHero
         title="Verlof"
         subtitle="Beheer verlof- en ziekmeldingen"
-        imageSrc="/uploads/App_pics/verzuim.png"
+        imageSrc="/uploads/App_pics/verzuim.jpg"
         imageAlt="verzuim"
       />
       <div className="p-6 space-y-4">

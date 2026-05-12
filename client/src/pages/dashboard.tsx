@@ -226,7 +226,7 @@ export default function DashboardPage() {
     );
   }
 
-  const photoSrc = dashboardPhoto?.value || "/uploads/App_pics/dashboard.png";
+  const photoSrc = dashboardPhoto?.value || "/uploads/App_pics/dashboard.jpg";
 
   return (
     <div className="overflow-auto h-full">

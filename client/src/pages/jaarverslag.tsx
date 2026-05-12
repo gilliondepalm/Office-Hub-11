@@ -282,7 +282,7 @@ export default function JaarverslagPage() {
       <PageHero
         title="Jaarverslag"
         subtitle="Personeels- en verzuimstatistieken"
-        imageSrc="/uploads/App_pics/rapporten.png"
+        imageSrc="/uploads/App_pics/rapporten.jpg"
       />
 
       <div className="p-6 space-y-5 max-w-5xl">

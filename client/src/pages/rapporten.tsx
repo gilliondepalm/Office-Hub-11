@@ -576,7 +576,7 @@ export default function RapportenPage() {
         <PageHero
           title="Rapporten"
           subtitle="Overzichten en afdrukbare rapporten van medewerkergegevens"
-          imageSrc={rapportenPhoto?.value || "/uploads/App_pics/rapporten.png"}
+          imageSrc={rapportenPhoto?.value || "/uploads/App_pics/rapporten.jpg"}
           imageAlt="rapporten"
         />
       </div>

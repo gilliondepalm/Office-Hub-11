@@ -164,7 +164,7 @@ export default function ApplicatiesPage() {
       <PageHero
         title="Applicaties"
         subtitle={isAdmin ? "Beheer applicaties en wijs ze toe aan gebruikers" : "Uw beschikbare applicaties op het netwerk"}
-        imageSrc="/uploads/App_pics/applicaties.png"
+        imageSrc="/uploads/App_pics/applicaties.jpg"
         imageAlt="applicaties"
       />
       <div className="p-6 space-y-6">

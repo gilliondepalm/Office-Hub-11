@@ -1444,7 +1444,7 @@ export default function WerktijdenPage() {
 
   return (
     <div className="overflow-auto h-full">
-      <PageHero title="Werktijden" subtitle="Prikklok data import & verwerking" imageSrc="/uploads/App_pics/werktijden.png" />
+      <PageHero title="Werktijden" subtitle="Prikklok data import & verwerking" imageSrc="/uploads/App_pics/werktijden.jpg" />
       <div className="p-6 space-y-6">
 
         {/* KPI kaarten */}

@@ -294,7 +294,7 @@ export async function registerRoutes(
 
   app.use("/PDF", express.default.static(path.join(process.cwd(), "PDF")));
 
-  app.use("/uploads/App_pics", express.default.static(appPicsDir));
+  app.use("/uploads/App_pics", express.default.static(appPicsDir, { maxAge: "1y", immutable: true }));
   app.use("/uploads/Beloning", express.default.static(beloningDir));
   app.use("/uploads/Functies", express.default.static(functiesDir));
   app.use("/uploads/Pasfoto", express.default.static(pasfotoDir));
@@ -2525,7 +2525,7 @@ export async function registerRoutes(
   const uploadLoginPhoto = multer({
     storage: multer.diskStorage({
       destination: (_req, _file, cb) => cb(null, appPicsDir),
-      filename: (_req, _file, cb) => cb(null, "login.png"),
+      filename: (_req, _file, cb) => cb(null, "login.jpg"),
     }),
     fileFilter: (_req, file, cb) => {
       if (file.mimetype.startsWith("image/")) cb(null, true);
@@ -2544,7 +2544,7 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ message: "Geen afbeelding geüpload" });
       }
-      const photoUrl = `/uploads/App_pics/login.png`;
+      const photoUrl = `/uploads/App_pics/login.jpg`;
       await storage.setSiteSetting("login_photo", photoUrl);
       res.json({ value: photoUrl });
     } catch (err: any) {
@@ -2573,7 +2573,7 @@ export async function registerRoutes(
   const uploadProductiePhoto = multer({
     storage: multer.diskStorage({
       destination: (_req, _file, cb) => cb(null, appPicsDir),
-      filename: (_req, _file, cb) => cb(null, "productie.png"),
+      filename: (_req, _file, cb) => cb(null, "productie.jpg"),
     }),
     fileFilter: (_req, file, cb) => {
       if (file.mimetype.startsWith("image/")) cb(null, true);
@@ -2592,7 +2592,7 @@ export async function registerRoutes(
       if (!req.file) {
         return res.status(400).json({ message: "Geen afbeelding geüpload" });
       }
-      const photoUrl = `/uploads/App_pics/productie.png`;
+      const photoUrl = `/uploads/App_pics/productie.jpg`;
       await storage.setSiteSetting("productie_photo", photoUrl);
       res.json({ value: photoUrl });
     } catch (err: any) {
