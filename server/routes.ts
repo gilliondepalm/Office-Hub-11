@@ -1190,10 +1190,11 @@ export async function registerRoutes(
       const countDays = (list: typeof allAbsences) => {
         let days = 0;
         for (const a of list) {
-          if (a.halfDay === "am" || a.halfDay === "pm") {
-            days += 0.5;
+          const workdays = countWeekdays(a.startDate, a.endDate);
+          if ((a.halfDay === "am" || a.halfDay === "pm") && workdays > 0) {
+            days += workdays - 0.5;
           } else {
-            days += countWeekdays(a.startDate, a.endDate);
+            days += workdays;
           }
         }
         return days;
@@ -1204,10 +1205,11 @@ export async function registerRoutes(
         for (const a of list) {
           if (a.startDate > upTo) continue;
           const effectiveEnd = a.endDate <= upTo ? a.endDate : upTo;
-          if (a.halfDay === "am" || a.halfDay === "pm") {
-            days += 0.5;
+          const workdays = countWeekdays(a.startDate, effectiveEnd);
+          if ((a.halfDay === "am" || a.halfDay === "pm") && effectiveEnd === a.endDate && workdays > 0) {
+            days += workdays - 0.5;
           } else {
-            days += countWeekdays(a.startDate, effectiveEnd);
+            days += workdays;
           }
         }
         return days;
@@ -1383,10 +1385,11 @@ export async function registerRoutes(
       const countDays = (list: typeof allAbsences) => {
         let days = 0;
         for (const a of list) {
-          if (a.halfDay === "am" || a.halfDay === "pm") {
-            days += 0.5;
+          const workdays = countWeekdays(a.startDate, a.endDate);
+          if ((a.halfDay === "am" || a.halfDay === "pm") && workdays > 0) {
+            days += workdays - 0.5;
           } else {
-            days += countWeekdays(a.startDate, a.endDate);
+            days += workdays;
           }
         }
         return days;
@@ -1487,10 +1490,11 @@ export async function registerRoutes(
       const countDays = (list: typeof allAbsences) => {
         let days = 0;
         for (const a of list) {
-          if (a.halfDay === "am" || a.halfDay === "pm") {
-            days += 0.5;
+          const workdays = countWeekdays(a.startDate, a.endDate);
+          if ((a.halfDay === "am" || a.halfDay === "pm") && workdays > 0) {
+            days += workdays - 0.5;
           } else {
-            days += countWeekdays(a.startDate, a.endDate);
+            days += workdays;
           }
         }
         return days;
@@ -1579,6 +1583,20 @@ export async function registerRoutes(
   app.post("/api/absences", requireAuth, async (req, res) => {
     try {
       const parsed = insertAbsenceSchema.parse(req.body);
+
+      // Reject requests that contain zero working days (e.g. pure weekend)
+      const countWd = (start: string, end: string) => {
+        const s = new Date(start + "T00:00:00");
+        const e = new Date(end + "T00:00:00");
+        let n = 0;
+        const cur = new Date(s);
+        while (cur <= e) { if (cur.getDay() !== 0 && cur.getDay() !== 6) n++; cur.setDate(cur.getDate() + 1); }
+        return n;
+      };
+      if (countWd(parsed.startDate, parsed.endDate) === 0) {
+        return res.status(400).json({ message: "De geselecteerde periode bevat geen werkdagen. Aanvragen in het weekend zijn niet toegestaan." });
+      }
+
       const absence = await storage.createAbsence(parsed);
       const requestingUser = await storage.getUser(parsed.userId);
       if (requestingUser?.role === "directeur") {

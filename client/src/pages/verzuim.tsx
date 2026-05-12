@@ -422,7 +422,7 @@ function AbsenceReportDialog({
       cur.setDate(cur.getDate() + 1);
     }
     if ((halfDay === "am" || halfDay === "pm") && count > 0) {
-      return 0.5;
+      return count - 0.5;
     }
     return count;
   };
@@ -1256,8 +1256,9 @@ export default function VerzuimPage() {
       setOpen(false);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Fout bij indienen", variant: "destructive" });
+    onError: (err: any) => {
+      const msg = err?.message || "Fout bij indienen";
+      toast({ title: msg, variant: "destructive" });
     },
   });
 
