@@ -11,7 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Users, ActivitySquare, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Users, ActivitySquare } from "lucide-react";
 import type { User, Absence } from "@shared/schema";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -151,40 +151,42 @@ function StatCard({
       </CardHeader>
       <CardContent className="space-y-1.5">
         <p className="text-3xl font-bold tracking-tight">{value}</p>
-        {sub && <div className="text-sm text-muted-foreground">{sub}</div>}
+        {sub && <div className="text-sm">{sub}</div>}
       </CardContent>
     </Card>
   );
 }
 
-function TrendBadge({
+function RelativeTrend({
   current,
   previous,
-  suffix = "%",
-  lowerIsBetter = false,
+  prevYear,
 }: {
   current: number;
   previous: number;
-  suffix?: string;
-  lowerIsBetter?: boolean;
+  prevYear: number;
 }) {
-  if (previous === 0) return <span className="text-xs text-muted-foreground">Geen vergelijkingsdata</span>;
+  if (previous === 0 && current === 0)
+    return <span className="text-xs text-muted-foreground">Geen data beschikbaar</span>;
+  if (previous === 0)
+    return <span className="text-xs text-muted-foreground">Geen data vorig jaar ({prevYear})</span>;
+
   const diff = current - previous;
-  if (Math.abs(diff) < 0.001)
+  const relativePct = Math.abs((diff / previous) * 100);
+
+  if (Math.abs(diff) < 0.0001)
     return (
       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Minus className="h-3.5 w-3.5" /> Gelijk t.o.v. vorig jaar ({previous.toFixed(2)}{suffix})
+        <Minus className="h-3.5 w-3.5" />
+        Gelijk aan {prevYear}
       </span>
     );
+
   const isUp = diff > 0;
-  const pct = Math.abs((diff / previous) * 100).toFixed(1);
-  const isGood = lowerIsBetter ? !isUp : isUp;
   return (
-    <span className={`flex items-center gap-1 text-xs font-medium ${isGood ? "text-green-600" : "text-red-600"}`}>
-      {isUp
-        ? <TrendingUp className="h-3.5 w-3.5" />
-        : <TrendingDown className="h-3.5 w-3.5" />}
-      {isUp ? "+" : ""}{diff.toFixed(2)}{suffix} t.o.v. vorig jaar ({previous.toFixed(2)}{suffix})
+    <span className={`flex items-center gap-1 text-xs font-medium ${isUp ? "text-red-600" : "text-green-600"}`}>
+      {isUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+      {isUp ? "Toename" : "Afname"} {relativePct.toFixed(1)}% t.o.v. {prevYear}
     </span>
   );
 }
@@ -221,14 +223,12 @@ export default function JaarverslagPage() {
     const countGender = (list: User[], g: string) =>
       list.filter((u) => (u as any).gender === g).length;
 
-    const hasUnknownGender = allUsers.some((u) => !(u as any).gender);
-
-    const ageGroups: Record<AgeGroupKey, { man: number; vrouw: number; onbekend: number }> = {
-      "0–24": { man: 0, vrouw: 0, onbekend: 0 },
-      "25–34": { man: 0, vrouw: 0, onbekend: 0 },
-      "35–44": { man: 0, vrouw: 0, onbekend: 0 },
-      "45–54": { man: 0, vrouw: 0, onbekend: 0 },
-      "55+": { man: 0, vrouw: 0, onbekend: 0 },
+    const ageGroups: Record<AgeGroupKey, { man: number; vrouw: number }> = {
+      "0–24": { man: 0, vrouw: 0 },
+      "25–34": { man: 0, vrouw: 0 },
+      "35–44": { man: 0, vrouw: 0 },
+      "45–54": { man: 0, vrouw: 0 },
+      "55+": { man: 0, vrouw: 0 },
     };
 
     for (const u of eindUsers) {
@@ -238,7 +238,6 @@ export default function JaarverslagPage() {
       const g = (u as any).gender as string | undefined;
       if (g === "man") ageGroups[grp].man++;
       else if (g === "vrouw") ageGroups[grp].vrouw++;
-      else ageGroups[grp].onbekend++;
     }
 
     const userMap = new Map(allUsers.map((u) => [u.id, u]));
@@ -260,7 +259,6 @@ export default function JaarverslagPage() {
       beginVrouw: countGender(beginUsers, "vrouw"),
       eindMan: countGender(eindUsers, "man"),
       eindVrouw: countGender(eindUsers, "vrouw"),
-      hasUnknownGender,
       ageGroups,
       sick: sickThis,
       sickPrev,
@@ -273,20 +271,23 @@ export default function JaarverslagPage() {
     (acc, g) => ({
       man: acc.man + (data?.ageGroups[g]?.man ?? 0),
       vrouw: acc.vrouw + (data?.ageGroups[g]?.vrouw ?? 0),
-      onbekend: acc.onbekend + (data?.ageGroups[g]?.onbekend ?? 0),
     }),
-    { man: 0, vrouw: 0, onbekend: 0 },
+    { man: 0, vrouw: 0 },
   );
 
   return (
     <div className="flex-1 overflow-auto">
       <PageHero
         title="Jaarverslag"
-        subtitle={`Personeels- en verzuimstatistieken — ${year}`}
+        subtitle="Personeels- en verzuimstatistieken"
         imageSrc="/uploads/App_pics/rapporten.png"
-      >
+      />
+
+      {/* ── year selector bar ──────────────────────────────────────────── */}
+      <div className="border-b bg-muted/30 px-6 py-3 flex items-center gap-3">
+        <span className="text-sm font-medium text-muted-foreground">Overzicht voor jaar:</span>
         <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
-          <SelectTrigger className="w-28 bg-white/10 border-white/20 text-white backdrop-blur-sm">
+          <SelectTrigger className="w-32 h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -295,9 +296,9 @@ export default function JaarverslagPage() {
             ))}
           </SelectContent>
         </Select>
-      </PageHero>
+      </div>
 
-      <div className="p-6 space-y-8 max-w-6xl mx-auto">
+      <div className="p-6 space-y-8 max-w-5xl">
 
         {/* ── 1. Aantal medewerkers ─────────────────────────────────────── */}
         <section className="space-y-4">
@@ -313,20 +314,19 @@ export default function JaarverslagPage() {
             </div>
           ) : (
             <>
-              {/* Totals Jan 1 / Dec 31 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                   title={`Aantal per 1 januari ${year}`}
                   value={data?.beginJaar ?? "—"}
-                  sub="medewerkers in dienst"
+                  sub={<span className="text-muted-foreground">medewerkers in dienst</span>}
                 />
                 <StatCard
                   title={`Aantal per 31 december ${year}`}
                   value={data?.eindJaar ?? "—"}
-                  sub="medewerkers in dienst"
+                  sub={<span className="text-muted-foreground">medewerkers in dienst</span>}
                 />
                 <StatCard
-                  title={`Man / Vrouw per 1 januari`}
+                  title={`Man / Vrouw per 1 januari ${year}`}
                   value={
                     <span>
                       {data?.beginMan ?? 0}
@@ -334,29 +334,15 @@ export default function JaarverslagPage() {
                       {data?.beginVrouw ?? 0}
                     </span>
                   }
-                  sub={
-                    data?.hasUnknownGender ? (
-                      <span className="flex items-center gap-1 text-amber-500 text-xs">
-                        <AlertCircle className="h-3 w-3" /> Geslacht niet voor alle medewerkers ingesteld
-                      </span>
-                    ) : undefined
-                  }
                 />
                 <StatCard
-                  title={`Man / Vrouw per 31 december`}
+                  title={`Man / Vrouw per 31 december ${year}`}
                   value={
                     <span>
                       {data?.eindMan ?? 0}
                       <span className="text-muted-foreground text-xl mx-1.5">/</span>
                       {data?.eindVrouw ?? 0}
                     </span>
-                  }
-                  sub={
-                    data?.hasUnknownGender ? (
-                      <span className="flex items-center gap-1 text-amber-500 text-xs">
-                        <AlertCircle className="h-3 w-3" /> Geslacht niet voor alle medewerkers ingesteld
-                      </span>
-                    ) : undefined
                   }
                 />
               </div>
@@ -375,24 +361,18 @@ export default function JaarverslagPage() {
                         <TableHead className="pl-4">Leeftijdsgroep</TableHead>
                         <TableHead className="text-center">Man</TableHead>
                         <TableHead className="text-center">Vrouw</TableHead>
-                        {data?.hasUnknownGender && (
-                          <TableHead className="text-center text-muted-foreground">Onbekend</TableHead>
-                        )}
                         <TableHead className="text-center pr-4">Totaal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {AGE_GROUPS.map((grp) => {
-                        const g = data?.ageGroups[grp] ?? { man: 0, vrouw: 0, onbekend: 0 };
-                        const total = g.man + g.vrouw + g.onbekend;
+                        const g = data?.ageGroups[grp] ?? { man: 0, vrouw: 0 };
+                        const total = g.man + g.vrouw;
                         return (
                           <TableRow key={grp}>
                             <TableCell className="pl-4 font-medium">{grp} jaar</TableCell>
                             <TableCell className="text-center">{g.man}</TableCell>
                             <TableCell className="text-center">{g.vrouw}</TableCell>
-                            {data?.hasUnknownGender && (
-                              <TableCell className="text-center text-muted-foreground">{g.onbekend}</TableCell>
-                            )}
                             <TableCell className="text-center font-semibold pr-4">{total}</TableCell>
                           </TableRow>
                         );
@@ -401,9 +381,6 @@ export default function JaarverslagPage() {
                         <TableCell className="pl-4">Totaal</TableCell>
                         <TableCell className="text-center">{ageGroupTotals.man}</TableCell>
                         <TableCell className="text-center">{ageGroupTotals.vrouw}</TableCell>
-                        {data?.hasUnknownGender && (
-                          <TableCell className="text-center text-muted-foreground">{ageGroupTotals.onbekend}</TableCell>
-                        )}
                         <TableCell className="text-center pr-4">{data?.eindJaar ?? 0}</TableCell>
                       </TableRow>
                     </TableBody>
@@ -417,7 +394,7 @@ export default function JaarverslagPage() {
         <Separator />
 
         {/* ── 2. Ziekteverzuim ─────────────────────────────────────────── */}
-        <section className="space-y-4">
+        <section className="space-y-4 pb-10">
           <div className="flex items-center gap-2">
             <ActivitySquare className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Ziekteverzuim</h2>
@@ -436,51 +413,109 @@ export default function JaarverslagPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Verzuimpercentage"
-                  value={`${(data?.sick.percentage ?? 0).toFixed(2)}%`}
-                  sub={
-                    <TrendBadge
-                      current={data?.sick.percentage ?? 0}
-                      previous={data?.sickPrev.percentage ?? 0}
-                      suffix="%"
-                      lowerIsBetter
-                    />
-                  }
-                />
-                <StatCard
-                  title="Gemiddelde duur per melding"
-                  value={`${(data?.sick.gemiddeldeDuur ?? 0).toFixed(1)} d`}
-                  sub={
-                    <TrendBadge
-                      current={data?.sick.gemiddeldeDuur ?? 0}
-                      previous={data?.sickPrev.gemiddeldeDuur ?? 0}
-                      suffix=" d"
-                      lowerIsBetter
-                    />
-                  }
-                />
-                <StatCard
-                  title="Totaal ziektedagen"
-                  value={data?.sick.totalDays ?? 0}
-                  sub={`${data?.sick.totalSpells ?? 0} afzonderlijke meldingen`}
-                />
-                <StatCard
-                  title={`Verzuim ${year - 1} (vergelijking)`}
-                  value={`${(data?.sickPrev.percentage ?? 0).toFixed(2)}%`}
-                  sub={`Gem. duur: ${(data?.sickPrev.gemiddeldeDuur ?? 0).toFixed(1)} d · ${data?.sickPrev.totalDays ?? 0} dagen`}
-                />
-              </div>
+              {/* ── Stat cards 2×2 ─────────────────────────────────────── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {(data?.sick.perMedewerker?.length ?? 0) > 0 && (
+                {/* Verzuimpercentage huidig jaar */}
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Ziekteverzuim per medewerker — {year}
+                      Ziekteverzuim percentage — {year}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-0">
+                  <CardContent className="space-y-2">
+                    <p className="text-3xl font-bold tracking-tight">
+                      {(data?.sick.percentage ?? 0).toFixed(2)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {data?.sick.totalDays ?? 0} ziektedagen · {data?.sick.totalSpells ?? 0} meldingen
+                    </p>
+                    <RelativeTrend
+                      current={data?.sick.percentage ?? 0}
+                      previous={data?.sickPrev.percentage ?? 0}
+                      prevYear={year - 1}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Gemiddelde duur huidig jaar */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Gemiddelde duur van de ziektedagen — {year}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-3xl font-bold tracking-tight">
+                      {(data?.sick.gemiddeldeDuur ?? 0).toFixed(1)}{" "}
+                      <span className="text-lg font-normal text-muted-foreground">dagen</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">per ziektegeval</p>
+                    <RelativeTrend
+                      current={data?.sick.gemiddeldeDuur ?? 0}
+                      previous={data?.sickPrev.gemiddeldeDuur ?? 0}
+                      prevYear={year - 1}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Verzuimpercentage vorig jaar */}
+                <Card className="bg-muted/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Ziekteverzuim percentage afgelopen jaar — {year - 1}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-3xl font-bold tracking-tight text-muted-foreground">
+                      {(data?.sickPrev.percentage ?? 0).toFixed(2)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {data?.sickPrev.totalDays ?? 0} ziektedagen · {data?.sickPrev.totalSpells ?? 0} meldingen
+                    </p>
+                    <RelativeTrend
+                      current={data?.sick.percentage ?? 0}
+                      previous={data?.sickPrev.percentage ?? 0}
+                      prevYear={year - 1}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Gemiddelde duur vorig jaar */}
+                <Card className="bg-muted/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Gemiddelde duur afgelopen jaar — {year - 1}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-3xl font-bold tracking-tight text-muted-foreground">
+                      {(data?.sickPrev.gemiddeldeDuur ?? 0).toFixed(1)}{" "}
+                      <span className="text-lg font-normal text-muted-foreground">dagen</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">per ziektegeval</p>
+                    <RelativeTrend
+                      current={data?.sick.gemiddeldeDuur ?? 0}
+                      previous={data?.sickPrev.gemiddeldeDuur ?? 0}
+                      prevYear={year - 1}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ── Duur per medewerker ──────────────────────────────────── */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Duur ziekteverzuim per medewerker — {year}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {(data?.sick.perMedewerker?.length ?? 0) === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      Geen goedgekeurde ziekteverzuimmeldingen gevonden voor {year}.
+                    </p>
+                  ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -503,17 +538,9 @@ export default function JaarverslagPage() {
                         ))}
                       </TableBody>
                     </Table>
-                  </CardContent>
-                </Card>
-              )}
-
-              {(data?.sick.perMedewerker?.length ?? 0) === 0 && (
-                <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    Geen goedgekeurde ziekteverzuimmeldingen gevonden voor {year}.
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
             </>
           )}
         </section>
