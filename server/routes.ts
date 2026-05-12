@@ -256,6 +256,15 @@ export async function registerRoutes(
 
   await seedDatabase();
 
+  // Migrate any site_settings values that still reference removed .png files in App_pics
+  const appPicsSettingKeys = ["login_photo", "dashboard_photo", "rapporten_photo", "productie_photo"];
+  for (const key of appPicsSettingKeys) {
+    const val = await storage.getSiteSetting(key);
+    if (val && val.includes("/uploads/App_pics/") && val.endsWith(".png")) {
+      await storage.setSiteSetting(key, val.replace(/\.png$/, ".jpg"));
+    }
+  }
+
   async function requireAuth(req: any, res: any, next: any) {
     const userId = (req.session as any).userId;
     if (!userId) {
