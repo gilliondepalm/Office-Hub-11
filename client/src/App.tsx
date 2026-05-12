@@ -28,6 +28,7 @@ import ApplicatiesPage from "@/pages/applicaties";
 import RapportenPage from "@/pages/rapporten";
 import ProductiePage from "@/pages/productie";
 import WerktijdenPage from "@/pages/werktijden";
+import JaarverslagPage from "@/pages/jaarverslag";
 import BeheerPage from "@/pages/beheer";
 import BeloningenPage from "@/pages/beloningen";
 import ProfielPage from "@/pages/profiel";
@@ -647,6 +648,7 @@ function Router() {
       {perms.includes("productie") && <Route path="/productie" component={ProductiePage} />}
       {perms.includes("rapporten") && <Route path="/rapporten" component={RapportenPage} />}
       {perms.includes("werktijden") && <Route path="/werktijden" component={WerktijdenPage} />}
+      {perms.includes("jaarverslag") && <Route path="/jaarverslag" component={JaarverslagPage} />}
       {perms.includes("beheer") && <Route path="/beheer" component={BeheerPage} />}
       <Route path="/profiel" component={ProfielPage} />
       <Route path="/" component={DashboardPage} />

@@ -50,6 +50,7 @@ const ALL_MODULES = [
   { key: "productie", label: "Productie" },
   { key: "rapporten", label: "Rapporten" },
   { key: "werktijden", label: "Werktijden" },
+  { key: "jaarverslag", label: "Jaarverslag" },
   { key: "beheer", label: "Beheer (Admin)" },
 ];
 

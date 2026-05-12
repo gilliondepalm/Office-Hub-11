@@ -57,6 +57,7 @@ const userFormSchema = z.object({
   telefoonnr: z.string().optional(),
   mobielnr: z.string().optional(),
   adres: z.string().optional(),
+  gender: z.string().optional(),
 }).refine((data) => {
   if (data.birthDate && data.startDate && data.birthDate > data.startDate) return false;
   return true;
@@ -80,6 +81,7 @@ const editFormSchema = z.object({
   telefoonnr: z.string().optional(),
   mobielnr: z.string().optional(),
   adres: z.string().optional(),
+  gender: z.string().optional(),
 }).refine((data) => {
   if (data.birthDate && data.startDate && data.birthDate > data.startDate) return false;
   return true;
@@ -211,6 +213,7 @@ function EditDialog({
       telefoonnr: (user as any).telefoonnr || "",
       mobielnr: (user as any).mobielnr || "",
       adres: (user as any).adres || "",
+      gender: (user as any).gender || "",
     },
   });
   const watchEditStartDate = form.watch("startDate");
@@ -245,6 +248,7 @@ function EditDialog({
         telefoonnr: data.telefoonnr || null,
         mobielnr: data.mobielnr || null,
         adres: data.adres || null,
+        gender: data.gender || null,
         titelsVoor,
         titelsAchter,
       };
@@ -396,6 +400,22 @@ function EditDialog({
                     {editFunctions.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((f) => (
                       <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="gender" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Geslacht</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger data-testid="input-edit-gender"><SelectValue placeholder="Selecteer geslacht" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">— Niet opgegeven —</SelectItem>
+                    <SelectItem value="man">Man</SelectItem>
+                    <SelectItem value="vrouw">Vrouw</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
