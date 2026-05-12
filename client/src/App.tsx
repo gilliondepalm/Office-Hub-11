@@ -634,22 +634,24 @@ Zodra een medewerker in de Analyse-tab is geselecteerd met beschikbare data:
 function Router() {
   const { user } = useAuth();
   const perms = user?.permissions || [];
+  // Admins and directeur always have access to all modules
+  const hasPerm = (key: string) => isAdminRole(user?.role) || perms.includes(key);
 
   return (
     <Switch>
-      {perms.includes("dashboard") && <Route path="/" component={DashboardPage} />}
-      {perms.includes("kalender") && <Route path="/kalender" component={KalenderPage} />}
-      {perms.includes("aankondigingen") && <Route path="/aankondigingen" component={AankondigingenPage} />}
-      {perms.includes("organisatie") && <Route path="/organisatie" component={OrganisatiePage} />}
-      {perms.includes("personalia") && <Route path="/personalia" component={PersonaliaPage} />}
-      {perms.includes("verzuim") && <Route path="/verzuim" component={VerzuimPage} />}
-      {perms.includes("beloningen") && <Route path="/beloningen" component={BeloningenPage} />}
-      {perms.includes("applicaties") && <Route path="/applicaties" component={ApplicatiesPage} />}
-      {perms.includes("productie") && <Route path="/productie" component={ProductiePage} />}
-      {perms.includes("rapporten") && <Route path="/rapporten" component={RapportenPage} />}
-      {perms.includes("werktijden") && <Route path="/werktijden" component={WerktijdenPage} />}
-      {perms.includes("jaarverslag") && <Route path="/jaarverslag" component={JaarverslagPage} />}
-      {perms.includes("beheer") && <Route path="/beheer" component={BeheerPage} />}
+      {hasPerm("dashboard") && <Route path="/" component={DashboardPage} />}
+      {hasPerm("kalender") && <Route path="/kalender" component={KalenderPage} />}
+      {hasPerm("aankondigingen") && <Route path="/aankondigingen" component={AankondigingenPage} />}
+      {hasPerm("organisatie") && <Route path="/organisatie" component={OrganisatiePage} />}
+      {hasPerm("personalia") && <Route path="/personalia" component={PersonaliaPage} />}
+      {hasPerm("verzuim") && <Route path="/verzuim" component={VerzuimPage} />}
+      {hasPerm("beloningen") && <Route path="/beloningen" component={BeloningenPage} />}
+      {hasPerm("applicaties") && <Route path="/applicaties" component={ApplicatiesPage} />}
+      {hasPerm("productie") && <Route path="/productie" component={ProductiePage} />}
+      {hasPerm("rapporten") && <Route path="/rapporten" component={RapportenPage} />}
+      {hasPerm("werktijden") && <Route path="/werktijden" component={WerktijdenPage} />}
+      {hasPerm("jaarverslag") && <Route path="/jaarverslag" component={JaarverslagPage} />}
+      {hasPerm("beheer") && <Route path="/beheer" component={BeheerPage} />}
       <Route path="/profiel" component={ProfielPage} />
       <Route path="/" component={DashboardPage} />
       <Route component={NotFound} />

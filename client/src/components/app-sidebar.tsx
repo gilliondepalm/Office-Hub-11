@@ -60,7 +60,10 @@ export function AppSidebar() {
   const { totalNew: kalenderNew } = useKalenderNotifications();
 
   const userPermissions = user?.permissions || [];
-  const visibleItems = menuItems.filter((item) => userPermissions.includes(item.key));
+  // Admins and directeur always see all menu items
+  const visibleItems = menuItems.filter((item) =>
+    isAdminRole(user?.role) || userPermissions.includes(item.key)
+  );
 
   const initials = user?.fullName
     ?.split(" ")
