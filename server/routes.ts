@@ -1615,7 +1615,7 @@ export async function registerRoutes(
 
       const absence = await storage.createAbsence(parsed);
       const requestingUser = await storage.getUser(parsed.userId);
-      if (requestingUser?.role === "directeur") {
+      if (parsed.type === "sick" || requestingUser?.role === "directeur") {
         await storage.updateAbsenceStatus(absence.id, "approved", parsed.userId);
         const updated = (await storage.getAbsences()).find(a => a.id === absence.id);
         return res.json(updated || absence);

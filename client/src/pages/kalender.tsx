@@ -153,7 +153,8 @@ function getAbsenceEntriesForCalendar(
 ): CalendarEntry[] {
   const entries: CalendarEntry[] = [];
   for (const absence of absenceList) {
-    if (absence.status !== "approved") continue;
+    const isOwn = absence.userId === currentUserId;
+    if (absence.status !== "approved" && !(isOwn && absence.status === "pending")) continue;
     const start = new Date(absence.startDate + "T00:00:00");
     const end = new Date(absence.endDate + "T00:00:00");
     const rangeStart = start < calStart ? calStart : start;
@@ -161,7 +162,6 @@ function getAbsenceEntriesForCalendar(
     if (rangeStart > rangeEnd) continue;
     const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
     const typeLabel = getAbsenceTypeLabel(absence.type);
-    const isOwn = absence.userId === currentUserId;
     const name = absence.userName || "";
     const title = isOwn ? `Mijn ${typeLabel.toLowerCase()}` : `${name} — ${typeLabel}`;
     const description = isOwn
