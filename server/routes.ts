@@ -1571,6 +1571,13 @@ export async function registerRoutes(
     }
 
     const mine = await storage.getAbsencesByUser(userId);
+    if (currentUser.department) {
+      const deptAbsences = await storage.getAbsencesByDepartment(currentUser.department);
+      const colleagueApproved = deptAbsences.filter(
+        a => a.userId !== userId && a.status === "approved"
+      );
+      return res.json([...mine, ...colleagueApproved]);
+    }
     res.json(mine);
   });
 

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import {
   Plus, ChevronLeft, ChevronRight, CalendarDays, MapPin, Clock,
-  Trash2, Pencil, Cake, Award, Flag, Upload, X,
+  Trash2, Pencil, Cake, Award, Flag, Upload, X, UserMinus,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +33,7 @@ import {
   addMonths, subMonths, eachDayOfInterval, isSameMonth, isToday,
 } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { Event, User, OfficialHoliday, Snipperdag } from "@shared/schema";
+import type { Event, User, OfficialHoliday, Snipperdag, Absence } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
 import { isAdminRole } from "@shared/schema";
 import { formatDate } from "@/lib/dateUtils";
@@ -124,13 +124,60 @@ interface CalendarEntry {
   id: string;
   title: string;
   date: string;
-  type: "event" | "verjaardag" | "jubileum" | "feestdag" | "snipperdag";
+  type: "event" | "verjaardag" | "jubileum" | "feestdag" | "snipperdag" | "verlof";
   category?: string | null;
   description?: string | null;
   time?: string | null;
   location?: string | null;
   event?: Event;
   createdByUser?: User;
+}
+
+function getAbsenceTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    vacation: "Vakantie",
+    sick: "Ziek",
+    personal: "Persoonlijk",
+    other: "Overig",
+    bvvd: "BVVD",
+    persoonlijk: "Persoonlijk",
+  };
+  return labels[type] || type;
+}
+
+function getAbsenceEntriesForCalendar(
+  absenceList: (Absence & { userName?: string })[],
+  calStart: Date,
+  calEnd: Date,
+  currentUserId: string,
+): CalendarEntry[] {
+  const entries: CalendarEntry[] = [];
+  for (const absence of absenceList) {
+    if (absence.status !== "approved") continue;
+    const start = new Date(absence.startDate + "T00:00:00");
+    const end = new Date(absence.endDate + "T00:00:00");
+    const rangeStart = start < calStart ? calStart : start;
+    const rangeEnd = end > calEnd ? calEnd : end;
+    if (rangeStart > rangeEnd) continue;
+    const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+    const typeLabel = getAbsenceTypeLabel(absence.type);
+    const isOwn = absence.userId === currentUserId;
+    const name = absence.userName || "";
+    const title = isOwn ? `Mijn ${typeLabel.toLowerCase()}` : `${name} — ${typeLabel}`;
+    const description = isOwn
+      ? `Jouw goedgekeurde ${typeLabel.toLowerCase()}`
+      : `${name} is afwezig (${typeLabel.toLowerCase()})`;
+    for (const day of days) {
+      entries.push({
+        id: `verlof-${absence.id}-${format(day, "yyyy-MM-dd")}`,
+        title,
+        date: format(day, "yyyy-MM-dd"),
+        type: "verlof",
+        description,
+      });
+    }
+  }
+  return entries;
 }
 
 function getDutchHolidays(year: number): CalendarEntry[] {
@@ -253,6 +300,11 @@ const typeConfig: Record<string, { icon: typeof Cake; color: string; label: stri
     icon: Flag,
     color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     label: "Snipperdag",
+  },
+  verlof: {
+    icon: UserMinus,
+    color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+    label: "Verlof",
   },
   event: {
     icon: CalendarDays,
@@ -794,6 +846,10 @@ export default function KalenderPage() {
     queryKey: ["/api/snipperdagen"],
   });
 
+  const { data: absencesData } = useQuery<(Absence & { userName?: string })[]>({
+    queryKey: ["/api/absences"],
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/events/${id}`);
@@ -877,8 +933,14 @@ export default function KalenderPage() {
       }
     }
 
+    if (absencesData && user?.id) {
+      const calStart = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 });
+      const calEnd = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 });
+      entries.push(...getAbsenceEntriesForCalendar(absencesData, calStart, calEnd, user.id));
+    }
+
     return entries;
-  }, [events, users, currentMonth, officialHolidayData, snipperdagenData]);
+  }, [events, users, currentMonth, officialHolidayData, snipperdagenData, absencesData, user?.id]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -901,6 +963,7 @@ export default function KalenderPage() {
     { type: "jubileum", label: "Jubileum", color: "bg-amber-500" },
     { type: "feestdag", label: "Feestdag", color: "bg-sky-400" },
     { type: "snipperdag", label: "Snipperdag", color: "bg-red-500" },
+    { type: "verlof", label: "Verlof collega's", color: "bg-teal-500" },
   ];
 
   if (loadingEvents) {
@@ -1013,6 +1076,7 @@ export default function KalenderPage() {
               const hasAnniversary = dayEntries.some((e) => e.type === "jubileum");
               const hasHoliday = dayEntries.some((e) => e.type === "feestdag");
               const hasSnipperdag = dayEntries.some((e) => e.type === "snipperdag");
+              const hasVerlof = dayEntries.some((e) => e.type === "verlof");
 
               return (
                 <div
@@ -1036,6 +1100,7 @@ export default function KalenderPage() {
                         {hasAnniversary && <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
                         {hasHoliday && <div className="h-1.5 w-1.5 rounded-full bg-sky-400" />}
                         {hasSnipperdag && <div className="h-1.5 w-1.5 rounded-full bg-red-500" />}
+                        {hasVerlof && <div className="h-1.5 w-1.5 rounded-full bg-teal-500" />}
                       </div>
                     )}
                   </div>
@@ -1046,6 +1111,7 @@ export default function KalenderPage() {
                         jubileum: "bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300",
                         feestdag: "bg-sky-200 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300",
                         snipperdag: "bg-red-200 dark:bg-red-900/40 text-red-800 dark:text-red-300",
+                        verlof: "bg-teal-200 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300",
                         event: entry.category && categoryColors[entry.category]
                           ? categoryColors[entry.category]
                           : "bg-primary/10 text-primary",
