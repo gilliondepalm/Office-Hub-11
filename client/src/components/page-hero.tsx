@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface PageHeroProps {
   title: string;
   subtitle?: string;
@@ -7,12 +9,25 @@ interface PageHeroProps {
 }
 
 export function PageHero({ title, subtitle, imageSrc, imageAlt, children }: PageHeroProps) {
+  const [loaded, setLoaded] = useState(false);
+
   return (
-    <div className="relative h-40 overflow-hidden" data-testid={`hero-${imageAlt?.toLowerCase().replace(/\s/g, "-") || "page"}`}>
+    <div
+      className="relative h-40 overflow-hidden"
+      style={{ backgroundColor: "hsl(152,40%,12%)" }}
+      data-testid={`hero-${imageAlt?.toLowerCase().replace(/\s/g, "-") || "page"}`}
+    >
       <img
         src={imageSrc}
         alt={imageAlt || title}
+        fetchPriority="high"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
         className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          opacity: loaded ? 1 : 0,
+          transition: "opacity 0.3s ease",
+        }}
       />
       <div className="absolute inset-0 bg-gradient-to-r from-[hsl(152,40%,18%/0.9)] via-[hsl(152,35%,22%/0.8)] to-[hsl(152,30%,25%/0.6)]" />
       <div className="relative z-10 h-full flex items-center px-8">
