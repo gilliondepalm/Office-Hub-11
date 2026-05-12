@@ -6,12 +6,11 @@ import { PageHero } from "@/components/page-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Users, ActivitySquare } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { User, Absence } from "@shared/schema";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -139,18 +138,22 @@ function StatCard({
   title,
   value,
   sub,
+  muted = false,
 }: {
   title: string;
   value: React.ReactNode;
   sub?: React.ReactNode;
+  muted?: boolean;
 }) {
   return (
-    <Card>
+    <Card className={muted ? "bg-muted/20" : ""}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        <p className="text-3xl font-bold tracking-tight">{value}</p>
+        <p className={`text-3xl font-bold tracking-tight ${muted ? "text-muted-foreground" : ""}`}>
+          {value}
+        </p>
         {sub && <div className="text-sm">{sub}</div>}
       </CardContent>
     </Card>
@@ -177,8 +180,7 @@ function RelativeTrend({
   if (Math.abs(diff) < 0.0001)
     return (
       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Minus className="h-3.5 w-3.5" />
-        Gelijk aan {prevYear}
+        <Minus className="h-3.5 w-3.5" /> Gelijk aan {prevYear}
       </span>
     );
 
@@ -283,267 +285,254 @@ export default function JaarverslagPage() {
         imageSrc="/uploads/App_pics/rapporten.png"
       />
 
-      {/* ── year selector bar ──────────────────────────────────────────── */}
-      <div className="border-b bg-muted/30 px-6 py-3 flex items-center gap-3">
-        <span className="text-sm font-medium text-muted-foreground">Overzicht voor jaar:</span>
-        <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
-          <SelectTrigger className="w-32 h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {years.map((y) => (
-              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <div className="p-6 space-y-5 max-w-5xl">
 
-      <div className="p-6 space-y-8 max-w-5xl">
+        {/* ── year selector ──────────────────────────────────────────── */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">Overzicht voor jaar:</span>
+          <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+            <SelectTrigger className="w-32 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* ── 1. Aantal medewerkers ─────────────────────────────────────── */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Aantal medewerkers</h2>
-            <Badge variant="outline">{year}</Badge>
-          </div>
+        {/* ── tabs ───────────────────────────────────────────────────── */}
+        <Tabs defaultValue="medewerkers" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="medewerkers">Aantal medewerkers</TabsTrigger>
+            <TabsTrigger value="ziekteverzuim">Ziekteverzuim</TabsTrigger>
+          </TabsList>
 
-          {loading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title={`Aantal per 1 januari ${year}`}
-                  value={data?.beginJaar ?? "—"}
-                  sub={<span className="text-muted-foreground">medewerkers in dienst</span>}
-                />
-                <StatCard
-                  title={`Aantal per 31 december ${year}`}
-                  value={data?.eindJaar ?? "—"}
-                  sub={<span className="text-muted-foreground">medewerkers in dienst</span>}
-                />
-                <StatCard
-                  title={`Man / Vrouw per 1 januari ${year}`}
-                  value={
-                    <span>
-                      {data?.beginMan ?? 0}
-                      <span className="text-muted-foreground text-xl mx-1.5">/</span>
-                      {data?.beginVrouw ?? 0}
-                    </span>
-                  }
-                />
-                <StatCard
-                  title={`Man / Vrouw per 31 december ${year}`}
-                  value={
-                    <span>
-                      {data?.eindMan ?? 0}
-                      <span className="text-muted-foreground text-xl mx-1.5">/</span>
-                      {data?.eindVrouw ?? 0}
-                    </span>
-                  }
-                />
+          {/* ── tab 1: Medewerkers ─────────────────────────────────── */}
+          <TabsContent value="medewerkers" className="space-y-4">
+            {loading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <StatCard
+                    title={`Aantal per 1 januari ${year}`}
+                    value={data?.beginJaar ?? "—"}
+                    sub={<span className="text-muted-foreground">medewerkers in dienst</span>}
+                  />
+                  <StatCard
+                    title={`Aantal per 31 december ${year}`}
+                    value={data?.eindJaar ?? "—"}
+                    sub={<span className="text-muted-foreground">medewerkers in dienst</span>}
+                  />
+                  <StatCard
+                    title={`Man / Vrouw per 1 januari ${year}`}
+                    value={
+                      <span>
+                        {data?.beginMan ?? 0}
+                        <span className="text-muted-foreground text-xl mx-1.5">/</span>
+                        {data?.beginVrouw ?? 0}
+                      </span>
+                    }
+                  />
+                  <StatCard
+                    title={`Man / Vrouw per 31 december ${year}`}
+                    value={
+                      <span>
+                        {data?.eindMan ?? 0}
+                        <span className="text-muted-foreground text-xl mx-1.5">/</span>
+                        {data?.eindVrouw ?? 0}
+                      </span>
+                    }
+                  />
+                </div>
 
-              {/* Age groups Dec 31 */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Leeftijdsgroepen per 31 december {year} — man / vrouw
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="pl-4">Leeftijdsgroep</TableHead>
-                        <TableHead className="text-center">Man</TableHead>
-                        <TableHead className="text-center">Vrouw</TableHead>
-                        <TableHead className="text-center pr-4">Totaal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {AGE_GROUPS.map((grp) => {
-                        const g = data?.ageGroups[grp] ?? { man: 0, vrouw: 0 };
-                        const total = g.man + g.vrouw;
-                        return (
-                          <TableRow key={grp}>
-                            <TableCell className="pl-4 font-medium">{grp} jaar</TableCell>
-                            <TableCell className="text-center">{g.man}</TableCell>
-                            <TableCell className="text-center">{g.vrouw}</TableCell>
-                            <TableCell className="text-center font-semibold pr-4">{total}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      <TableRow className="bg-muted/30 font-semibold border-t-2">
-                        <TableCell className="pl-4">Totaal</TableCell>
-                        <TableCell className="text-center">{ageGroupTotals.man}</TableCell>
-                        <TableCell className="text-center">{ageGroupTotals.vrouw}</TableCell>
-                        <TableCell className="text-center pr-4">{data?.eindJaar ?? 0}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </section>
-
-        <Separator />
-
-        {/* ── 2. Ziekteverzuim ─────────────────────────────────────────── */}
-        <section className="space-y-4 pb-10">
-          <div className="flex items-center gap-2">
-            <ActivitySquare className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Ziekteverzuim</h2>
-            <Badge variant="outline">{year}</Badge>
-          </div>
-
-          {!isManager ? (
-            <Card>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                Alleen managers en beheerders hebben toegang tot verzuimgegevens.
-              </CardContent>
-            </Card>
-          ) : loading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
-            </div>
-          ) : (
-            <>
-              {/* ── Stat cards 2×2 ─────────────────────────────────────── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                {/* Verzuimpercentage huidig jaar */}
                 <Card>
-                  <CardHeader className="pb-2">
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Ziekteverzuim percentage — {year}
+                      Leeftijdsgroepen per 31 december {year} — man / vrouw
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-3xl font-bold tracking-tight">
-                      {(data?.sick.percentage ?? 0).toFixed(2)}%
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {data?.sick.totalDays ?? 0} ziektedagen · {data?.sick.totalSpells ?? 0} meldingen
-                    </p>
-                    <RelativeTrend
-                      current={data?.sick.percentage ?? 0}
-                      previous={data?.sickPrev.percentage ?? 0}
-                      prevYear={year - 1}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Gemiddelde duur huidig jaar */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Gemiddelde duur van de ziektedagen — {year}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-3xl font-bold tracking-tight">
-                      {(data?.sick.gemiddeldeDuur ?? 0).toFixed(1)}{" "}
-                      <span className="text-lg font-normal text-muted-foreground">dagen</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">per ziektegeval</p>
-                    <RelativeTrend
-                      current={data?.sick.gemiddeldeDuur ?? 0}
-                      previous={data?.sickPrev.gemiddeldeDuur ?? 0}
-                      prevYear={year - 1}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Verzuimpercentage vorig jaar */}
-                <Card className="bg-muted/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Ziekteverzuim percentage afgelopen jaar — {year - 1}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-3xl font-bold tracking-tight text-muted-foreground">
-                      {(data?.sickPrev.percentage ?? 0).toFixed(2)}%
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {data?.sickPrev.totalDays ?? 0} ziektedagen · {data?.sickPrev.totalSpells ?? 0} meldingen
-                    </p>
-                    <RelativeTrend
-                      current={data?.sick.percentage ?? 0}
-                      previous={data?.sickPrev.percentage ?? 0}
-                      prevYear={year - 1}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Gemiddelde duur vorig jaar */}
-                <Card className="bg-muted/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Gemiddelde duur afgelopen jaar — {year - 1}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-3xl font-bold tracking-tight text-muted-foreground">
-                      {(data?.sickPrev.gemiddeldeDuur ?? 0).toFixed(1)}{" "}
-                      <span className="text-lg font-normal text-muted-foreground">dagen</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">per ziektegeval</p>
-                    <RelativeTrend
-                      current={data?.sick.gemiddeldeDuur ?? 0}
-                      previous={data?.sickPrev.gemiddeldeDuur ?? 0}
-                      prevYear={year - 1}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* ── Duur per medewerker ──────────────────────────────────── */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Duur ziekteverzuim per medewerker — {year}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {(data?.sick.perMedewerker?.length ?? 0) === 0 ? (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      Geen goedgekeurde ziekteverzuimmeldingen gevonden voor {year}.
-                    </p>
-                  ) : (
+                  <CardContent className="p-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="pl-4">Medewerker</TableHead>
-                          <TableHead className="text-right">Ziektedagen</TableHead>
-                          <TableHead className="text-right">Meldingen</TableHead>
-                          <TableHead className="text-right pr-4">Gem. duur</TableHead>
+                          <TableHead className="pl-4">Leeftijdsgroep</TableHead>
+                          <TableHead className="text-center">Man</TableHead>
+                          <TableHead className="text-center">Vrouw</TableHead>
+                          <TableHead className="text-center pr-4">Totaal</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data?.sick.perMedewerker.map((row) => (
-                          <TableRow key={row.userId}>
-                            <TableCell className="pl-4 font-medium">{row.name}</TableCell>
-                            <TableCell className="text-right">{row.days}</TableCell>
-                            <TableCell className="text-right">{row.spells}</TableCell>
-                            <TableCell className="text-right pr-4">
-                              {row.spells > 0 ? (row.days / row.spells).toFixed(1) : "—"} d
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {AGE_GROUPS.map((grp) => {
+                          const g = data?.ageGroups[grp] ?? { man: 0, vrouw: 0 };
+                          return (
+                            <TableRow key={grp}>
+                              <TableCell className="pl-4 font-medium">{grp} jaar</TableCell>
+                              <TableCell className="text-center">{g.man}</TableCell>
+                              <TableCell className="text-center">{g.vrouw}</TableCell>
+                              <TableCell className="text-center font-semibold pr-4">{g.man + g.vrouw}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        <TableRow className="bg-muted/30 font-semibold border-t-2">
+                          <TableCell className="pl-4">Totaal</TableCell>
+                          <TableCell className="text-center">{ageGroupTotals.man}</TableCell>
+                          <TableCell className="text-center">{ageGroupTotals.vrouw}</TableCell>
+                          <TableCell className="text-center pr-4">{data?.eindJaar ?? 0}</TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
-                  )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* ── tab 2: Ziekteverzuim ───────────────────────────────── */}
+          <TabsContent value="ziekteverzuim" className="space-y-4 pb-8">
+            {!isManager ? (
+              <Card>
+                <CardContent className="py-10 text-center text-muted-foreground">
+                  Alleen managers en beheerders hebben toegang tot verzuimgegevens.
                 </CardContent>
               </Card>
-            </>
-          )}
-        </section>
+            ) : loading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+              </div>
+            ) : (
+              <>
+                {/* 2×2 stat grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Ziekteverzuim percentage — {year}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-3xl font-bold tracking-tight">
+                        {(data?.sick.percentage ?? 0).toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {data?.sick.totalDays ?? 0} ziektedagen · {data?.sick.totalSpells ?? 0} meldingen
+                      </p>
+                      <RelativeTrend
+                        current={data?.sick.percentage ?? 0}
+                        previous={data?.sickPrev.percentage ?? 0}
+                        prevYear={year - 1}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Gemiddelde duur van de ziektedagen — {year}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-3xl font-bold tracking-tight">
+                        {(data?.sick.gemiddeldeDuur ?? 0).toFixed(1)}{" "}
+                        <span className="text-lg font-normal text-muted-foreground">dagen</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">per ziektegeval</p>
+                      <RelativeTrend
+                        current={data?.sick.gemiddeldeDuur ?? 0}
+                        previous={data?.sickPrev.gemiddeldeDuur ?? 0}
+                        prevYear={year - 1}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-muted/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Ziekteverzuim percentage afgelopen jaar — {year - 1}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-3xl font-bold tracking-tight text-muted-foreground">
+                        {(data?.sickPrev.percentage ?? 0).toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {data?.sickPrev.totalDays ?? 0} ziektedagen · {data?.sickPrev.totalSpells ?? 0} meldingen
+                      </p>
+                      <RelativeTrend
+                        current={data?.sick.percentage ?? 0}
+                        previous={data?.sickPrev.percentage ?? 0}
+                        prevYear={year - 1}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-muted/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Gemiddelde duur afgelopen jaar — {year - 1}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="text-3xl font-bold tracking-tight text-muted-foreground">
+                        {(data?.sickPrev.gemiddeldeDuur ?? 0).toFixed(1)}{" "}
+                        <span className="text-lg font-normal text-muted-foreground">dagen</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">per ziektegeval</p>
+                      <RelativeTrend
+                        current={data?.sick.gemiddeldeDuur ?? 0}
+                        previous={data?.sickPrev.gemiddeldeDuur ?? 0}
+                        prevYear={year - 1}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Per medewerker table */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Duur ziekteverzuim per medewerker — {year}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {(data?.sick.perMedewerker?.length ?? 0) === 0 ? (
+                      <p className="py-8 text-center text-sm text-muted-foreground">
+                        Geen goedgekeurde ziekteverzuimmeldingen gevonden voor {year}.
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="pl-4">Medewerker</TableHead>
+                            <TableHead className="text-right">Ziektedagen</TableHead>
+                            <TableHead className="text-right">Meldingen</TableHead>
+                            <TableHead className="text-right pr-4">Gem. duur</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data?.sick.perMedewerker.map((row) => (
+                            <TableRow key={row.userId}>
+                              <TableCell className="pl-4 font-medium">{row.name}</TableCell>
+                              <TableCell className="text-right">{row.days}</TableCell>
+                              <TableCell className="text-right">{row.spells}</TableCell>
+                              <TableCell className="text-right pr-4">
+                                {row.spells > 0 ? (row.days / row.spells).toFixed(1) : "—"} d
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
