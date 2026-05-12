@@ -1487,8 +1487,11 @@ export default function VerzuimPage() {
   );
 
   const canApprove = (absence: any) => {
-    if (absence.status !== "pending" || absence.userId === user?.id) return false;
+    if (absence.status !== "pending") return false;
+    // Directeur may approve all pending requests, including their own
     if (user?.role === "directeur") return true;
+    // All other roles may not self-approve
+    if (absence.userId === user?.id) return false;
     if (isAdminRole(user?.role) && !isAdminRole(absence.userRole) && absence.userRole !== "manager" && absence.userRole !== "manager_az") return true;
     if ((user?.role === "manager" || user?.role === "manager_az") && absence.userRole === "employee") {
       if (isPureManager && myDept && (absence as any).userDepartment !== myDept) return false;
