@@ -17,6 +17,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
   const [, setLocation] = useLocation();
   const [showReset, setShowReset] = useState(false);
   const [resetStep, setResetStep] = useState<"email" | "done">("email");
@@ -85,11 +86,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 relative">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-[hsl(152,40%,15%)]">
         <img
           src={loginPhoto?.value || "/uploads/App_pics/curacao_login.jpg"}
           alt="Kantoor"
           className="absolute inset-0 w-full h-full object-cover"
+          fetchPriority="high"
+          onLoad={() => setBgLoaded(true)}
+          style={{ opacity: bgLoaded ? 1 : 0, transition: "opacity 0.3s ease" }}
           data-testid="img-login-photo"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[hsl(152,40%,20%/0.85)] to-[hsl(152,50%,12%/0.9)]" />
