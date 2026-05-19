@@ -467,7 +467,39 @@ SYSTEEM
   Velden: key (primaire sleutel), value, updated_at. Gebruikt voor o.a. achtergrondafbeeldingen.
 
 \u25ba help_content \u2014 Help-teksten per paginaroute (bewerkbaar via Help-knop)
-  Velden: id, page_route (uniek, bijv. /beheer), title, content.`,
+  Velden: id, page_route (uniek, bijv. /beheer), title, content.
+
+\u25ba werktijden \u2014 Prikklokregistraties (ruwe inklok/uitklok-data)
+  Velden: id, user_id, checktime (tijdstip), check_type (in/out).
+
+\u25ba import_log \u2014 Logboek van elke CSV-importverwerking
+  Velden: id, filename, imported_at, record_count, error_count, warning_count, status, log_entries (JSONB).
+
+\u25ba prikklok_event_log \u2014 Gedetailleerde per-record logregels van een import
+  Velden: id, import_id, level (info/warning/error), message, userid, checktime.
+
+\u25ba correctieverzoeken \u2014 Correctieverzoeken ingediend door medewerkers
+  Velden: id, user_id, datum, reden, status (pending/approved/rejected), behandeld_door, created_at.
+
+──────────────────────────────────────────
+TIJDZONE \u2014 SYSTEEMINSTELLING
+──────────────────────────────────────────
+
+Het systeem is vergrendeld op de lokale tijd van Cura\u00e7ao: America/Curacao (UTC\u22124, geen zomertijd).
+
+Wat dit betekent voor de applicatie:
+\u2022 \u201eVandaag\u201d in alle modules verwijst altijd naar de actuele datum op Cura\u00e7ao, ongeacht de tijdzone van de server of de browser van de gebruiker.
+\u2022 De vakantiesaldo-berekening en de daggrens in het verzuimoverzicht gebruiken Cura\u00e7aose middernacht (00:00 AST) als omslagpunt.
+\u2022 Standaarddatums in formulieren \u2014 zoals datum in dienst bij het aanmaken van een nieuwe medewerker en einddatum bij deactiveren \u2014 worden voorgevuld met de huidige datum op Cura\u00e7ao.
+\u2022 De dashboard-teller \u201eVandaag afwezig\u201d telt medewerkers op basis van de actuele Cura\u00e7aose datum.
+\u2022 De actiedatum in Beloningen (Jaarplan) wordt bij openen en na opslaan teruggezet naar de huidige Cura\u00e7aose datum.
+
+Technische details (voor beheerders):
+\u2022 Tijdzone: America/Curacao \u2014 UTC\u22124, permanent (Cura\u00e7ao past geen zomertijd toe).
+\u2022 De omgevingsvariabele TZ="America/Curacao" is ingesteld op serverniveau zodat alle Node.js-datumoperaties de juiste lokale tijd gebruiken.
+\u2022 Alle \u201evandaag\u201d-berekeningen gebruiken toLocaleDateString("en-CA", \u007b timeZone: "America/Curacao" \u007d) in plaats van de UTC-gebaseerde toISOString().
+\u2022 Prikklok-importdata en datum-iteratielussen in het verzuimsysteem zijn niet aangepast; deze werken met opgeslagen datumstrings (jjjj-MM-dd) en zijn tijdzone-neutraal.
+\u2022 De servermodule server/utils/timezone.ts exporteert de hulpfuncties todayCuracaoStr() en toCuracaoDateStr(d) voor consistent gebruik door de back-end.`,
   },
   "/productie": {
     title: "Productie",
