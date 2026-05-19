@@ -523,7 +523,7 @@ function AbsenceReportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 pr-8">
             <DialogTitle className="flex items-center gap-2">
               <FileBarChart className="h-5 w-5" />
               Afwezigheidsrapport
