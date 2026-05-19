@@ -1178,6 +1178,8 @@ export default function VerzuimPage() {
   const [editingSaldoOud, setEditingSaldoOud] = useState<{ id: string; name: string; days: number } | null>(null);
   const [newSaldoOud, setNewSaldoOud] = useState("");
   const [jaarAfsluitenOpen, setJaarAfsluitenOpen] = useState(false);
+  const [rejectAbsence, setRejectAbsence] = useState<(Absence & { userName?: string; userDepartment?: string }) | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
   const [jaarAfsluitenResult, setJaarAfsluitenResult] = useState<{
     closedYear: number; newYear: number; updatedCount: number;
     results: { userId: string; userName: string; oudSaldo: number; nieuwSaldo: number }[];
@@ -1298,8 +1300,8 @@ export default function VerzuimPage() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, persoonlijkBesluit }: { id: string; status: string; persoonlijkBesluit?: string }) => {
-      await apiRequest("PATCH", `/api/absences/${id}`, { status, ...(persoonlijkBesluit ? { persoonlijkBesluit } : {}) });
+    mutationFn: async ({ id, status, persoonlijkBesluit, rejectionReason }: { id: string; status: string; persoonlijkBesluit?: string; rejectionReason?: string }) => {
+      await apiRequest("PATCH", `/api/absences/${id}`, { status, ...(persoonlijkBesluit ? { persoonlijkBesluit } : {}), ...(rejectionReason ? { rejectionReason } : {}) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/absences"] });
@@ -2395,6 +2397,8 @@ export default function VerzuimPage() {
                                 : absence.reason || "-";
                               const displayReason = absence.status === "cancelled" && (absence as any).cancelReason
                                 ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
+                                : absence.status === "rejected" && (absence as any).rejectionReason
+                                ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${(absence as any).rejectionReason}`
                                 : baseReason;
                               const isApprovable = !isSnipperdagRow && canApprove(absence);
                               const isDuplicate = !isSnipperdagRow && duplicateAbsenceIds.has(absence.id);
@@ -2486,7 +2490,7 @@ export default function VerzuimPage() {
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => updateStatusMutation.mutate({ id: absence.id, status: "rejected" })}
+                                            onClick={() => { setRejectAbsence(absence); setRejectReason(""); }}
                                             data-testid={`button-reject-absence-${absence.id}`}
                                           >
                                             <XCircle className="h-3 w-3 mr-1" />
@@ -2622,7 +2626,13 @@ export default function VerzuimPage() {
                     <p className="bg-muted/50 rounded-md p-3 leading-relaxed whitespace-pre-wrap text-muted-foreground">{cancelReason}</p>
                   </div>
                 )}
-                {!baseReason && !cancelReason && (
+                          {detailAbsence.status === "rejected" && (detailAbsence as any).rejectionReason && (
+                  <div>
+                    <p className="text-muted-foreground font-medium mb-1">Reden voor afwijzing</p>
+                    <p className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md p-3 leading-relaxed whitespace-pre-wrap text-red-900 dark:text-red-200">{(detailAbsence as any).rejectionReason}</p>
+                  </div>
+                )}
+                {!baseReason && !cancelReason && !(detailAbsence.status === "rejected" && (detailAbsence as any).rejectionReason) && (
                   <p className="text-muted-foreground italic">Geen reden opgegeven.</p>
                 )}
               </div>
@@ -2776,6 +2786,8 @@ export default function VerzuimPage() {
                                     : absence.reason || "-";
                                   const displayReason = absence.status === "cancelled" && absence.cancelReason
                                     ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${absence.cancelReason}`
+                                    : absence.status === "rejected" && (absence as any).rejectionReason
+                                    ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${(absence as any).rejectionReason}`
                                     : baseReason;
                                   const isCancelled = absence.status === "cancelled";
                                   const isDupOvz = duplicateAbsenceIds.has(absence.id);
@@ -3356,6 +3368,52 @@ export default function VerzuimPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={!!rejectAbsence} onOpenChange={(o) => { if (!o) { setRejectAbsence(null); setRejectReason(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Verzoek afwijzen
+            </DialogTitle>
+            <DialogDescription>
+              {rejectAbsence && `${(rejectAbsence as any).userName || "Medewerker"} · ${formatDateShort(rejectAbsence.startDate)} – ${formatDate(rejectAbsence.endDate)}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Reden voor afwijzing <span className="text-muted-foreground font-normal">(optioneel)</span></label>
+              <Textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={3}
+                placeholder="Geef een toelichting aan de medewerker..."
+                data-testid="input-rejection-reason"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => { setRejectAbsence(null); setRejectReason(""); }}>
+                Annuleren
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={updateStatusMutation.isPending}
+                onClick={() => {
+                  if (!rejectAbsence) return;
+                  updateStatusMutation.mutate(
+                    { id: rejectAbsence.id, status: "rejected", ...(rejectReason.trim() ? { rejectionReason: rejectReason.trim() } : {}) },
+                    { onSuccess: () => { setRejectAbsence(null); setRejectReason(""); } }
+                  );
+                }}
+                data-testid="button-confirm-reject"
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                {updateStatusMutation.isPending ? "Bezig..." : "Verzoek afwijzen"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

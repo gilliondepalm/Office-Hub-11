@@ -84,6 +84,7 @@ export const absences = pgTable("absences", {
   approvedBy: varchar("approved_by").references(() => users.id),
   deductVacation: boolean("deduct_vacation").default(false),
   cancelReason: text("cancel_reason"),
+  rejectionReason: text("rejection_reason"),
   persoonlijkBesluit: text("persoonlijk_besluit"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

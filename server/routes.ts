@@ -1650,7 +1650,7 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Geen rechten om verzuim goed te keuren" });
       }
 
-      const { status, persoonlijkBesluit } = req.body;
+      const { status, persoonlijkBesluit, rejectionReason } = req.body;
       // Persoonlijk future rejections → treat as cancelled with standard reason
       let actualStatus = status;
       let autoCancelReason: string | undefined = undefined;
@@ -1658,10 +1658,11 @@ export async function registerRoutes(
         const todayStr = new Date().toISOString().split("T")[0];
         if (absence.startDate > todayStr) {
           actualStatus = "cancelled";
-          autoCancelReason = "Uw verzoek voor verzuim op basis van persoonlijke redenen wordt niet gehonoreerd.";
+          autoCancelReason = rejectionReason || "Uw verzoek voor verzuim op basis van persoonlijke redenen wordt niet gehonoreerd.";
         }
       }
-      await storage.updateAbsenceStatus(req.params.id, actualStatus, userId, autoCancelReason, persoonlijkBesluit ?? undefined);
+      const finalRejectionReason = actualStatus === "rejected" && rejectionReason ? rejectionReason : undefined;
+      await storage.updateAbsenceStatus(req.params.id, actualStatus, userId, autoCancelReason, persoonlijkBesluit ?? undefined, finalRejectionReason);
       res.json({ message: "Bijgewerkt" });
     } catch (err: any) {
       res.status(400).json({ message: err.message || "Bijwerken mislukt" });
