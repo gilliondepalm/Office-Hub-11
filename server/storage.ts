@@ -126,6 +126,7 @@ export interface IStorage {
   createMessage(msg: InsertMessage): Promise<Message>;
   replyToMessage(id: string, reply: string): Promise<Message>;
   markMessageRead(id: string): Promise<void>;
+  markReplyRead(id: string): Promise<void>;
 
   getAoProcedures(): Promise<(AoProcedure & { departmentName?: string })[]>;
   getAoProceduresByDepartment(departmentId: string): Promise<AoProcedure[]>;
@@ -709,6 +710,7 @@ export class DatabaseStorage implements IStorage {
         reply: messages.reply,
         repliedAt: messages.repliedAt,
         read: messages.read,
+        replyRead: messages.replyRead,
         createdAt: messages.createdAt,
         fromUserName: fromUser.fullName,
         toUserName: toUser.fullName,
@@ -727,12 +729,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async replyToMessage(id: string, reply: string): Promise<Message> {
-    const [updated] = await db.update(messages).set({ reply, repliedAt: new Date() }).where(eq(messages.id, id)).returning();
+    const [updated] = await db.update(messages).set({ reply, repliedAt: new Date(), replyRead: false }).where(eq(messages.id, id)).returning();
     return updated;
   }
 
   async markMessageRead(id: string): Promise<void> {
     await db.update(messages).set({ read: true }).where(eq(messages.id, id));
+  }
+
+  async markReplyRead(id: string): Promise<void> {
+    await db.update(messages).set({ replyRead: true }).where(eq(messages.id, id));
   }
 
   async getAoProcedures(): Promise<(AoProcedure & { departmentName?: string })[]> {

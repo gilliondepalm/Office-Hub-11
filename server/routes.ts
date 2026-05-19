@@ -2289,6 +2289,21 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/messages/:id/reply-read", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const allMessages = await storage.getMessagesByUser(userId);
+      const msg = allMessages.find(m => m.id === req.params.id);
+      if (!msg || msg.fromUserId !== userId) {
+        return res.status(403).json({ message: "Geen toegang tot dit bericht" });
+      }
+      await storage.markReplyRead(req.params.id);
+      res.json({ message: "Reactie gelezen" });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Bijwerken mislukt" });
+    }
+  });
+
   // AO Procedures
   app.get("/api/ao-procedures", requireAuth, async (_req, res) => {
     const all = await storage.getAoProcedures();

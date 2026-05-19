@@ -133,6 +133,7 @@ export const messages = pgTable("messages", {
   reply: text("reply"),
   repliedAt: timestamp("replied_at"),
   read: boolean("read").notNull().default(false),
+  replyRead: boolean("reply_read").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -241,7 +241,7 @@ function AnnouncementFormDialog({
   );
 }
 
-type MessageWithNames = Message & { fromUserName?: string; toUserName?: string };
+type MessageWithNames = Message & { fromUserName?: string; toUserName?: string; replyRead?: boolean };
 
 function SendMessageDialog({
   open,
@@ -462,6 +462,15 @@ function MessageDetailDialog({
     },
   });
 
+  const replyReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PATCH", `/api/messages/${id}/reply-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+    },
+  });
+
   const replyMutation = useMutation({
     mutationFn: async () => {
       if (!message) return;
@@ -478,9 +487,15 @@ function MessageDetailDialog({
     },
   });
 
+  const isSender = message?.fromUserId === currentUserId;
+  const hasUnreadReply = isSender && !!message?.reply && message?.replyRead === false;
+
   useEffect(() => {
     if (message && isRecipient && !message.read) {
       readMutation.mutate(message.id);
+    }
+    if (message && hasUnreadReply) {
+      replyReadMutation.mutate(message.id);
     }
   }, [message?.id]);
 
@@ -612,6 +627,10 @@ export function useAankondigingenNotifications() {
     m => m.toUserId === userId && !m.read
   ).length;
 
+  const unreadRepliesCount = (messagesData || []).filter(
+    m => (m as any).fromUserId === userId && !!(m as any).reply && (m as any).replyRead === false
+  ).length;
+
   const newMessagesCount = (messagesData || []).filter(
     m => (m.toUserId === userId || (m as any).fromUserId === userId) &&
       new Date((m as any).createdAt).getTime() > getLastSeen(userId, "messages")
@@ -621,9 +640,9 @@ export function useAankondigingenNotifications() {
     f => new Date(f.modified).getTime() > getLastSeen(userId, "nieuwsbrieven")
   ).length;
 
-  const totalNew = newAnnouncementsCount + Math.max(unreadMessagesCount, newMessagesCount) + newNieuwsbrievenCount;
+  const totalNew = newAnnouncementsCount + Math.max(unreadMessagesCount + unreadRepliesCount, newMessagesCount) + newNieuwsbrievenCount;
 
-  return { newAnnouncementsCount, unreadMessagesCount, newMessagesCount, newNieuwsbrievenCount, totalNew };
+  return { newAnnouncementsCount, unreadMessagesCount, unreadRepliesCount, newMessagesCount, newNieuwsbrievenCount, totalNew };
 }
 
 export default function AankondigingenPage() {
@@ -718,6 +737,7 @@ export default function AankondigingenPage() {
   });
 
   const unreadCount = (messagesData || []).filter(m => m.toUserId === user?.id && !m.read).length;
+  const unreadReplyCount = (messagesData || []).filter(m => m.fromUserId === user?.id && !!(m as any).reply && (m as any).replyRead === false).length;
 
   const isAdminOrManager = isAdminRole(user?.role) || user?.role === "manager";
   const canCreateAnnouncement = isAdminRole(user?.role) || user?.role === "manager_az";
@@ -786,9 +806,9 @@ export default function AankondigingenPage() {
         >
           <Mail className="h-4 w-4 inline -mt-0.5" />
           Berichten
-          {Math.max(unreadCount, newMessagesCount) > 0 && (
+          {Math.max(unreadCount + unreadReplyCount, newMessagesCount) > 0 && (
             <Badge variant="destructive" className="text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center" data-testid="badge-unread-count">
-              {Math.max(unreadCount, newMessagesCount)}
+              {Math.max(unreadCount + unreadReplyCount, newMessagesCount)}
             </Badge>
           )}
         </button>
@@ -993,23 +1013,25 @@ export default function AankondigingenPage() {
               {(messagesData || []).map((msg) => {
                 const isSent = msg.fromUserId === user?.id;
                 const isUnread = !isSent && !msg.read;
+                const hasUnreadReply = isSent && !!msg.reply && (msg as any).replyRead === false;
+                const isHighlighted = isUnread || hasUnreadReply;
                 return (
                   <Card
                     key={msg.id}
-                    className={`cursor-pointer hover-elevate ${isUnread ? "border-primary/40" : ""}`}
+                    className={`cursor-pointer hover-elevate ${isHighlighted ? "border-primary/40" : ""}`}
                     onClick={() => setSelectedMessage(msg)}
                     data-testid={`card-message-${msg.id}`}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
-                          isUnread ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                          isHighlighted ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                         }`}>
-                          {isUnread ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />}
+                          {isHighlighted ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className={`text-sm ${isUnread ? "font-bold" : "font-semibold"}`} data-testid={`text-message-subject-${msg.id}`}>
+                            <h3 className={`text-sm ${isHighlighted ? "font-bold" : "font-semibold"}`} data-testid={`text-message-subject-${msg.id}`}>
                               {msg.subject}
                             </h3>
                             {isSent && (
@@ -1020,7 +1042,12 @@ export default function AankondigingenPage() {
                             {isUnread && (
                               <Badge variant="default" className="text-xs">Nieuw</Badge>
                             )}
-                            {msg.reply && (
+                            {hasUnreadReply && (
+                              <Badge className="text-xs gap-1 bg-amber-500 hover:bg-amber-500 text-white">
+                                <Reply className="h-3 w-3" /> Nieuw antwoord
+                              </Badge>
+                            )}
+                            {msg.reply && !(hasUnreadReply) && (
                               <Badge variant="secondary" className="text-xs gap-1">
                                 <Reply className="h-3 w-3" /> Beantwoord
                               </Badge>
