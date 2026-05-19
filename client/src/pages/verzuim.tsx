@@ -449,18 +449,22 @@ function AbsenceReportDialog({
           const baseReason = a.type === "bvvd" && a.bvvdReason
             ? a.bvvdReason + (a.reason ? ` - ${a.reason}` : "")
             : a.reason || "-";
-          const reason = a.status === "cancelled" && (a as any).cancelReason
+          const isManagerRejection = !!(a as any).rejectionReason;
+          const reason = a.status === "rejected" || isManagerRejection
+            ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${(a as any).rejectionReason || "–"}`
+            : a.status === "cancelled" && (a as any).cancelReason
             ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(a as any).cancelReason}`
             : baseReason;
           const halfDayLabel = a.halfDay === "am" ? " (Ochtend)" : a.halfDay === "pm" ? " (Middag)" : "";
-          const statusColor = a.status === "approved" ? "#16a34a" : a.status === "rejected" ? "#dc2626" : a.status === "cancelled" ? "#ea580c" : "#6b7280";
+          const effectiveStatusColor = a.status === "approved" ? "#16a34a" : (a.status === "rejected" || isManagerRejection) ? "#dc2626" : a.status === "cancelled" ? "#ea580c" : "#6b7280";
+          const effectiveStatusLabel = isManagerRejection && a.status !== "rejected" ? "Afgewezen" : statusLabelsLocal[a.status] || a.status;
           return `<tr>
             <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;padding-left:20px">${escHtml((a as any).userName || "Medewerker")}</td>
             <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb">${escHtml(typeLabelsLocal[a.type] || a.type)}</td>
             <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap">${formatDateShort(a.startDate)} – ${formatDate(a.endDate)}${halfDayLabel}</td>
             <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;text-align:right">${days}</td>
             <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;max-width:220px;word-wrap:break-word">${escHtml(reason)}</td>
-            <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;color:${statusColor};font-weight:600">${escHtml(statusLabelsLocal[a.status] || a.status)}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #e5e7eb;color:${effectiveStatusColor};font-weight:600">${escHtml(effectiveStatusLabel)}</td>
           </tr>`;
         }).join("");
       return `<tr><td colspan="6" style="padding:6px 8px;background:#f3f4f6;font-weight:700;font-size:13px;border-bottom:1px solid #d1d5db">${escHtml(dept)} (${grouped[dept].length} meldingen)</td></tr>${deptRows}`;
@@ -656,10 +660,14 @@ function AbsenceReportDialog({
                         const baseReason = absence.type === "bvvd" && absence.bvvdReason
                           ? absence.bvvdReason + (absence.reason ? ` - ${absence.reason}` : "")
                           : absence.reason || "-";
-                        const displayReason = absence.status === "cancelled" && (absence as any).cancelReason
-                          ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
-                          : absence.status === "rejected"
+                        const isManagerRejection = !!absence.rejectionReason;
+                        const effectiveRejected = absence.status === "rejected" || isManagerRejection;
+                        const displayReason = absence.status === "rejected"
                           ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason || "–"}`
+                          : isManagerRejection
+                          ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason}`
+                          : absence.status === "cancelled" && (absence as any).cancelReason
+                          ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
                           : baseReason;
                         return (
                           <TableRow
@@ -687,11 +695,11 @@ function AbsenceReportDialog({
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={absence.status === "approved" ? "default" : absence.status === "rejected" ? "destructive" : "secondary"}
-                                className={`text-xs ${absence.status === "cancelled" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : absence.status === "pending" ? "bg-background border" : ""}`}
+                                variant={absence.status === "approved" ? "default" : effectiveRejected ? "destructive" : "secondary"}
+                                className={`text-xs ${absence.status === "cancelled" && !isManagerRejection ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : absence.status === "pending" ? "bg-background border" : ""}`}
                               >
-                                {absence.status === "cancelled" && <Ban className="h-3 w-3 mr-1" />}
-                                {statusLabels[absence.status] || absence.status}
+                                {absence.status === "cancelled" && !isManagerRejection && <Ban className="h-3 w-3 mr-1" />}
+                                {effectiveRejected ? statusLabels.rejected : (statusLabels[absence.status] || absence.status)}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -715,22 +723,28 @@ function AbsenceReportDialog({
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <div className="flex flex-wrap gap-2 text-sm">
-                <span className="font-medium">{reportDetailAbsence.userName || "Medewerker"}</span>
-                <span className="text-muted-foreground">·</span>
-                <Badge variant="secondary" className="text-xs">
-                  {reportDetailAbsence.type === "persoonlijk" && reportDetailAbsence.persoonlijkBesluit === "geoorloofd" ? "Geoorloofd" : typeLabels[reportDetailAbsence.type]}
-                </Badge>
-                <span className="text-muted-foreground text-xs self-center">
-                  {formatDateShort(reportDetailAbsence.startDate)} – {formatDate(reportDetailAbsence.endDate)}
-                </span>
-                <Badge
-                  variant={reportDetailAbsence.status === "approved" ? "default" : reportDetailAbsence.status === "rejected" ? "destructive" : "secondary"}
-                  className={`text-xs ${reportDetailAbsence.status === "cancelled" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : reportDetailAbsence.status === "pending" ? "bg-background border" : ""}`}
-                >
-                  {statusLabels[reportDetailAbsence.status] || reportDetailAbsence.status}
-                </Badge>
-              </div>
+              {(() => {
+                const rdIsManagerRejection = !!reportDetailAbsence.rejectionReason;
+                const rdEffectiveRejected = reportDetailAbsence.status === "rejected" || rdIsManagerRejection;
+                return (
+                  <div className="flex flex-wrap gap-2 text-sm">
+                    <span className="font-medium">{reportDetailAbsence.userName || "Medewerker"}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {reportDetailAbsence.type === "persoonlijk" && reportDetailAbsence.persoonlijkBesluit === "geoorloofd" ? "Geoorloofd" : typeLabels[reportDetailAbsence.type]}
+                    </Badge>
+                    <span className="text-muted-foreground text-xs self-center">
+                      {formatDateShort(reportDetailAbsence.startDate)} – {formatDate(reportDetailAbsence.endDate)}
+                    </span>
+                    <Badge
+                      variant={reportDetailAbsence.status === "approved" ? "default" : rdEffectiveRejected ? "destructive" : "secondary"}
+                      className={`text-xs ${reportDetailAbsence.status === "cancelled" && !rdIsManagerRejection ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : reportDetailAbsence.status === "pending" ? "bg-background border" : ""}`}
+                    >
+                      {rdEffectiveRejected ? statusLabels.rejected : (statusLabels[reportDetailAbsence.status] || reportDetailAbsence.status)}
+                    </Badge>
+                  </div>
+                );
+              })()}
               <div className="rounded-md border bg-muted/30 p-3 min-h-[60px]">
                 {reportDetailAbsence.displayReason && reportDetailAbsence.displayReason !== "-" ? (
                   <p className="text-sm whitespace-pre-wrap">{reportDetailAbsence.displayReason}</p>
@@ -2451,10 +2465,12 @@ export default function VerzuimPage() {
                               const baseReason = absence.type === "bvvd" && absence.bvvdReason
                                 ? absence.bvvdReason + (absence.reason ? ` - ${absence.reason}` : "")
                                 : absence.reason || "-";
-                              const displayReason = absence.status === "cancelled" && (absence as any).cancelReason
-                                ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
-                                : absence.status === "rejected"
+                              const displayReason = absence.status === "rejected"
                                 ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason || "–"}`
+                                : absence.rejectionReason
+                                ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason}`
+                                : absence.status === "cancelled" && (absence as any).cancelReason
+                                ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
                                 : baseReason;
                               const isApprovable = !isSnipperdagRow && canApprove(absence);
                               const isDuplicate = !isSnipperdagRow && duplicateAbsenceIds.has(absence.id);
@@ -2593,11 +2609,14 @@ export default function VerzuimPage() {
             </DialogDescription>
           </DialogHeader>
           {detailAbsence && (() => {
-            const sc = statusConfig[detailAbsence.status] || statusConfig.pending;
+            const detailIsManagerRejection = !!detailAbsence.rejectionReason;
+            const sc = (detailIsManagerRejection && detailAbsence.status !== "rejected")
+              ? { ...statusConfig.rejected }
+              : statusConfig[detailAbsence.status] || statusConfig.pending;
             const baseReason = detailAbsence.type === "bvvd" && detailAbsence.bvvdReason
               ? detailAbsence.bvvdReason + (detailAbsence.reason ? ` - ${detailAbsence.reason}` : "")
               : detailAbsence.reason || "";
-            const cancelReason = detailAbsence.status === "cancelled" && (detailAbsence as any).cancelReason
+            const cancelReason = detailAbsence.status === "cancelled" && !detailIsManagerRejection && (detailAbsence as any).cancelReason
               ? (detailAbsence as any).cancelReason
               : null;
             const bal = vacationBalances?.find(b => b.userId === detailAbsence.userId);
@@ -2682,7 +2701,7 @@ export default function VerzuimPage() {
                     <p className="bg-muted/50 rounded-md p-3 leading-relaxed whitespace-pre-wrap text-muted-foreground">{cancelReason}</p>
                   </div>
                 )}
-                          {detailAbsence.status === "rejected" && (
+                {(detailAbsence.status === "rejected" || detailIsManagerRejection) && (
                   <div>
                     <p className="text-muted-foreground font-medium mb-1">Reden voor afwijzing</p>
                     {detailAbsence.rejectionReason ? (
@@ -2692,7 +2711,7 @@ export default function VerzuimPage() {
                     )}
                   </div>
                 )}
-                {!baseReason && !cancelReason && detailAbsence.status !== "rejected" && (
+                {!baseReason && !cancelReason && detailAbsence.status !== "rejected" && !detailIsManagerRejection && (
                   <p className="text-muted-foreground italic">Geen reden opgegeven.</p>
                 )}
               </div>
@@ -2839,17 +2858,22 @@ export default function VerzuimPage() {
                               {deptRows.map((item) => {
                                 if (item._kind === "absence") {
                                   const absence = item.row;
-                                  const sc = statusConfig[absence.status] || statusConfig.pending;
+                                  const ovzIsManagerRejection = !!absence.rejectionReason;
+                                  const sc = (ovzIsManagerRejection && absence.status !== "rejected")
+                                    ? { ...statusConfig.rejected }
+                                    : statusConfig[absence.status] || statusConfig.pending;
                                   const StatusIcon = sc.icon;
                                   const baseReason = absence.type === "bvvd" && absence.bvvdReason
                                     ? absence.bvvdReason + (absence.reason ? ` - ${absence.reason}` : "")
                                     : absence.reason || "-";
-                                  const displayReason = absence.status === "cancelled" && absence.cancelReason
-                                    ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${absence.cancelReason}`
-                                    : absence.status === "rejected"
+                                  const displayReason = absence.status === "rejected"
                                     ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason || "–"}`
+                                    : ovzIsManagerRejection
+                                    ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason}`
+                                    : absence.status === "cancelled" && absence.cancelReason
+                                    ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${absence.cancelReason}`
                                     : baseReason;
-                                  const isCancelled = absence.status === "cancelled";
+                                  const isCancelled = absence.status === "cancelled" && !ovzIsManagerRejection;
                                   const isDupOvz = duplicateAbsenceIds.has(absence.id);
                                   return (
                                     <TableRow

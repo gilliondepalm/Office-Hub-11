@@ -1661,7 +1661,7 @@ export async function registerRoutes(
           autoCancelReason = rejectionReason || "Uw verzoek voor verzuim op basis van persoonlijke redenen wordt niet gehonoreerd.";
         }
       }
-      const finalRejectionReason = actualStatus === "rejected" && rejectionReason ? rejectionReason : undefined;
+      const finalRejectionReason = rejectionReason || undefined;
       await storage.updateAbsenceStatus(req.params.id, actualStatus, userId, autoCancelReason, persoonlijkBesluit ?? undefined, finalRejectionReason);
       res.json({ message: "Bijgewerkt" });
     } catch (err: any) {

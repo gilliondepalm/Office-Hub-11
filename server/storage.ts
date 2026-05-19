@@ -503,7 +503,7 @@ export class DatabaseStorage implements IStorage {
     const fields: any = { status: status as any, approvedBy };
     if (cancelReason !== undefined) fields.cancelReason = cancelReason;
     if (persoonlijkBesluit !== undefined) fields.persoonlijkBesluit = persoonlijkBesluit;
-    fields.rejectionReason = status === "rejected" ? (rejectionReason || null) : null;
+    fields.rejectionReason = rejectionReason || null;
     await db.update(absences).set(fields).where(eq(absences.id, id));
   }
 
