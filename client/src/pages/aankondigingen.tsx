@@ -256,7 +256,20 @@ function SendMessageDialog({
   const [sendMode, setSendMode] = useState<"individual" | "department">("individual");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
-  const activeUsers = (allUsers || []).filter(u => u.active);
+  const dutchRole = (role: string) => {
+    const map: Record<string, string> = {
+      directeur: "Directeur",
+      admin: "Beheerder",
+      manager: "Manager",
+      manager_az: "Manager AZ",
+      employee: "Medewerker",
+    };
+    return map[role] ?? role;
+  };
+
+  const activeUsers = (allUsers || [])
+    .filter(u => u.active)
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, "nl"));
   const isManager = currentUser?.role === "manager";
   const isAdmin = currentUser ? isAdminRole(currentUser.role) : false;
 
@@ -376,7 +389,7 @@ function SendMessageDialog({
                         className="rounded border-input"
                       />
                       <span className="text-sm flex-1">{u.fullName}</span>
-                      <span className="text-xs text-muted-foreground">{u.role}</span>
+                      <span className="text-xs text-muted-foreground">{dutchRole(u.role)}</span>
                     </label>
                   ))}
                 </div>
@@ -393,7 +406,7 @@ function SendMessageDialog({
                     <div key={u.id} className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0" data-testid={`dept-user-${u.id}`}>
                       <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm flex-1">{u.fullName}</span>
-                      <span className="text-xs text-muted-foreground">{u.role}</span>
+                      <span className="text-xs text-muted-foreground">{dutchRole(u.role)}</span>
                     </div>
                   ))}
                 </div>
