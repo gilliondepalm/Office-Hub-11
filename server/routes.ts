@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { todayCuracaoStr } from "./utils/timezone";
 import session from "express-session";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { storage } from "./storage";
@@ -777,7 +778,7 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Geen toegang" });
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayCuracaoStr();
 
     const allAbsences = isAdminRole(currentUser.role)
       ? await storage.getAbsences()
@@ -1159,7 +1160,7 @@ export async function registerRoutes(
       );
 
       const absenceById = new Map(allAbsences.map(a => [a.id, a]));
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = todayCuracaoStr();
 
       const perDayCancelByUser: Record<string, number> = {};
       const perDayCancelOpgenomenByUser: Record<string, number> = {};
@@ -1655,7 +1656,7 @@ export async function registerRoutes(
       let actualStatus = status;
       let autoCancelReason: string | undefined = undefined;
       if (status === "rejected" && absence.type === "persoonlijk") {
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = todayCuracaoStr();
         if (absence.startDate > todayStr) {
           actualStatus = "cancelled";
           autoCancelReason = rejectionReason || "Uw verzoek voor verzuim op basis van persoonlijke redenen wordt niet gehonoreerd.";
@@ -1748,7 +1749,7 @@ export async function registerRoutes(
         return count;
       };
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = todayCuracaoStr();
       let takenDays = 0;
 
       if (absence.status === "approved") {

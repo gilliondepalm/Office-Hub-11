@@ -483,7 +483,7 @@ function DeactivateDialog({
   const form = useForm<z.infer<typeof deactivateFormSchema>>({
     resolver: zodResolver(deactivateFormSchema),
     defaultValues: {
-      endDate: new Date().toISOString().split("T")[0],
+      endDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
     },
   });
 
@@ -1219,7 +1219,7 @@ export default function PersonaliaPage() {
       username: "", password: "",
       voornamen: "", voorvoegsel: "", achternaam: "",
       email: "", role: "employee", department: "",
-      startDate: new Date().toISOString().split("T")[0],
+      startDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
       birthDate: "", phoneExtension: "", functie: "",
       kadasterId: "", cedulaNr: "", telefoonnr: "", mobielnr: "", adres: "",
     },

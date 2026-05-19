@@ -2013,7 +2013,7 @@ function ActieForm({ onSave, onCancel, isPending, testPrefix }: {
   isPending: boolean;
   testPrefix: string;
 }) {
-  const [datum, setDatum] = useState(new Date().toISOString().slice(0, 10));
+  const [datum, setDatum] = useState(new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }));
   const [tekst, setTekst] = useState("");
   return (
     <div className="bg-muted/40 rounded-md p-2 space-y-2">
@@ -2024,7 +2024,7 @@ function ActieForm({ onSave, onCancel, isPending, testPrefix }: {
       <Textarea value={tekst} onChange={e => setTekst(e.target.value)} placeholder="Beschrijf de ondernomen actie..." rows={2} className="text-xs" data-testid={`input-actie-tekst-${testPrefix}`} />
       <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onCancel}>Annuleren</Button>
-        <Button size="sm" className="h-7 text-xs" onClick={() => { if (tekst.trim()) { onSave(datum, tekst); setTekst(""); setDatum(new Date().toISOString().slice(0, 10)); } }} disabled={!tekst.trim() || isPending} data-testid={`button-save-actie-${testPrefix}`}>
+        <Button size="sm" className="h-7 text-xs" onClick={() => { if (tekst.trim()) { onSave(datum, tekst); setTekst(""); setDatum(new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" })); } }} disabled={!tekst.trim() || isPending} data-testid={`button-save-actie-${testPrefix}`}>
           <Save className="h-3 w-3 mr-1" />Opslaan
         </Button>
       </div>

@@ -779,7 +779,7 @@ function CancelVerzuimTab({ allUsers, currentUser, isAdmin, onlyMe = false, read
   const { toast } = useToast();
 
   const year = new Date().getFullYear();
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" });
 
   const typeLabelsCancel: Record<string, string> = {
     vacation: "Vakantie", sick: "Ziekte", personal: "Geoorloofd", other: "Ongeoorloofd", bvvd: "BVVD", persoonlijk: "Persoonlijk",

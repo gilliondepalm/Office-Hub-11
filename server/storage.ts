@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, isNotNull } from "drizzle-orm";
+import { todayCuracaoStr } from "./utils/timezone";
 import {
   users, events, announcements, departments, absences, absenceCancellations, rewards, applications, appAccess, messages,
   aoProcedures, aoInstructions, positionHistory, personalDevelopment, legislationLinks, caoDocuments, siteSettings,
@@ -675,7 +676,7 @@ export class DatabaseStorage implements IStorage {
   async getDashboardStats() {
     const [employeeCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.active, true));
     const [temporaryEmployeeCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users).where(and(eq(users.active, true), eq(users.role, "tijdelijk")));
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayCuracaoStr();
     const [activeAbsenceCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(absences)

@@ -1,3 +1,13 @@
+const CURACAO_TZ = "America/Curacao";
+
+/**
+ * Returns today's date in the Curaçao timezone as "yyyy-MM-dd".
+ * Use this instead of new Date().toISOString().split("T")[0] (which is UTC-based).
+ */
+export function todayCuracaoStr(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: CURACAO_TZ });
+}
+
 export function formatDate(dateStr: string | Date | null | undefined): string {
   if (!dateStr) return "—";
   const s = dateStr instanceof Date ? dateStr.toISOString() : dateStr;
