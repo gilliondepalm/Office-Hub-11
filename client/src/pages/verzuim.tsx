@@ -376,6 +376,7 @@ function AbsenceReportDialog({
   };
 
   const [filterType, setFilterType] = useState<string>("all");
+  const [reportDetailAbsence, setReportDetailAbsence] = useState<any | null>(null);
 
   const departments = Array.from(new Set([
     ...users.filter(u => u.active && u.department).map(u => u.department!),
@@ -657,9 +658,16 @@ function AbsenceReportDialog({
                           : absence.reason || "-";
                         const displayReason = absence.status === "cancelled" && (absence as any).cancelReason
                           ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
+                          : absence.status === "rejected"
+                          ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason || "–"}`
                           : baseReason;
                         return (
-                          <TableRow key={absence.id} data-testid={`row-report-${absence.id}`}>
+                          <TableRow
+                            key={absence.id}
+                            data-testid={`row-report-${absence.id}`}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setReportDetailAbsence({ ...absence, displayReason })}
+                          >
                             <TableCell className="font-medium text-sm pl-6">
                               {(absence as any).userName || "Medewerker"}
                             </TableCell>
@@ -696,6 +704,54 @@ function AbsenceReportDialog({
           </div>
         )}
       </DialogContent>
+
+      {reportDetailAbsence && (
+        <Dialog open={!!reportDetailAbsence} onOpenChange={(v) => { if (!v) setReportDetailAbsence(null); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Reden melding
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2 text-sm">
+                <span className="font-medium">{reportDetailAbsence.userName || "Medewerker"}</span>
+                <span className="text-muted-foreground">·</span>
+                <Badge variant="secondary" className="text-xs">
+                  {reportDetailAbsence.type === "persoonlijk" && reportDetailAbsence.persoonlijkBesluit === "geoorloofd" ? "Geoorloofd" : typeLabels[reportDetailAbsence.type]}
+                </Badge>
+                <span className="text-muted-foreground text-xs self-center">
+                  {formatDateShort(reportDetailAbsence.startDate)} – {formatDate(reportDetailAbsence.endDate)}
+                </span>
+                <Badge
+                  variant={reportDetailAbsence.status === "approved" ? "default" : reportDetailAbsence.status === "rejected" ? "destructive" : "secondary"}
+                  className={`text-xs ${reportDetailAbsence.status === "cancelled" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : reportDetailAbsence.status === "pending" ? "bg-background border" : ""}`}
+                >
+                  {statusLabels[reportDetailAbsence.status] || reportDetailAbsence.status}
+                </Badge>
+              </div>
+              <div className="rounded-md border bg-muted/30 p-3 min-h-[60px]">
+                {reportDetailAbsence.displayReason && reportDetailAbsence.displayReason !== "-" ? (
+                  <p className="text-sm whitespace-pre-wrap">{reportDetailAbsence.displayReason}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Geen reden opgegeven</p>
+                )}
+              </div>
+              {reportDetailAbsence.status === "rejected" && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Reden voor afwijzing</p>
+                  {reportDetailAbsence.rejectionReason ? (
+                    <p className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm whitespace-pre-wrap text-red-900 dark:text-red-200">{reportDetailAbsence.rejectionReason}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">–</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }
