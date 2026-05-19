@@ -339,7 +339,13 @@ function RechtenTab() {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-2">
-            {allUsers?.filter((u) => u.active !== false).map((u) => {
+            {allUsers?.filter((u) => u.active !== false).sort((a, b) => {
+              const deptA = a.department || "zzz";
+              const deptB = b.department || "zzz";
+              const deptCmp = deptA.localeCompare(deptB, "nl");
+              if (deptCmp !== 0) return deptCmp;
+              return (a.fullName || "").localeCompare(b.fullName || "", "nl");
+            }).map((u) => {
               const initials = u.fullName?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "??";
               const permCount = u.permissions?.length || 0;
               return (
