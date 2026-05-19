@@ -2398,7 +2398,7 @@ export default function VerzuimPage() {
                               const displayReason = absence.status === "cancelled" && (absence as any).cancelReason
                                 ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${(absence as any).cancelReason}`
                                 : absence.status === "rejected"
-                                ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${(absence as any).rejectionReason || "–"}`
+                                ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason || "–"}`
                                 : baseReason;
                               const isApprovable = !isSnipperdagRow && canApprove(absence);
                               const isDuplicate = !isSnipperdagRow && duplicateAbsenceIds.has(absence.id);
@@ -2629,8 +2629,8 @@ export default function VerzuimPage() {
                           {detailAbsence.status === "rejected" && (
                   <div>
                     <p className="text-muted-foreground font-medium mb-1">Reden voor afwijzing</p>
-                    {(detailAbsence as any).rejectionReason ? (
-                      <p className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md p-3 leading-relaxed whitespace-pre-wrap text-red-900 dark:text-red-200">{(detailAbsence as any).rejectionReason}</p>
+                    {detailAbsence.rejectionReason ? (
+                      <p className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md p-3 leading-relaxed whitespace-pre-wrap text-red-900 dark:text-red-200">{detailAbsence.rejectionReason}</p>
                     ) : (
                       <p className="text-muted-foreground italic">–</p>
                     )}
@@ -2791,7 +2791,7 @@ export default function VerzuimPage() {
                                   const displayReason = absence.status === "cancelled" && absence.cancelReason
                                     ? `${baseReason !== "-" ? baseReason + " · " : ""}Annulering: ${absence.cancelReason}`
                                     : absence.status === "rejected"
-                                    ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${(absence as any).rejectionReason || "–"}`
+                                    ? `${baseReason !== "-" ? baseReason + " · " : ""}Afwijzing: ${absence.rejectionReason || "–"}`
                                     : baseReason;
                                   const isCancelled = absence.status === "cancelled";
                                   const isDupOvz = duplicateAbsenceIds.has(absence.id);
