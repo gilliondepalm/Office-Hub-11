@@ -706,53 +706,7 @@ function BalieM3Tab() {
         ))}
       </div>
 
-      {/* ── Inzagen — aparte grafiek ── */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Inzagen per jaar — cumulatief t/m {maandLabel}</CardTitle>
-          <CardDescription className="text-xs">Lijndiagram — Inzagen afzonderlijk weergegeven</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div style={{ minWidth: jaren.length * 48 + 80 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={data} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="jaar" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={48} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: any, name: string) => [typeof v === "number" && isFinite(v) ? v.toLocaleString("nl") : v, name]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="inzagen" name="Inzagen" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Inzagen — staafdiagram per jaar (t/m {maandLabel})</CardTitle>
-          <CardDescription className="text-xs">Gecumuleerde waarde per jaar</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div style={{ minWidth: jaren.length * 48 + 80 }}>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="jaar" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={48} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: any) => [typeof v === "number" && isFinite(v) ? v.toLocaleString("nl") : v, "Inzagen"]} />
-                  <Bar dataKey="inzagen" name="Inzagen" fill="#6366f1" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Overige producttypen ── */}
+      {/* ── Producttypen ── */}
       <div className="flex flex-wrap gap-2 items-center">
         <span className="text-xs text-muted-foreground font-medium mr-1">Producten:</span>
         {BALIE3_PRODUCTEN.map(p => {
