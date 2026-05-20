@@ -900,6 +900,7 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
   const { toast } = useToast();
   const isAdmin = isAdminRole(currentUser?.role) || currentUser?.role === "manager_az";
   const isPureManager = currentUser?.role === "manager";
+  const isEmployee = !isAdmin && !isPureManager;
   const myDept = currentUser?.department || "";
   const canEdit = isAdmin || isPureManager;
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -1143,8 +1144,56 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
       })
     : allBeoordelingen;
 
-  if (viewMode === "competencies" && isAdmin) {
+  if (viewMode === "competencies" && (isAdmin || isEmployee)) {
     const normLabels: Record<number, string> = { 1: "Onvoldoende", 2: "Nog te ontwikkelen", 3: "Normaal/goed", 4: "Zeer goed/aantoonbaar beter", 5: "Uitstekend/voorbeeld voor anderen" };
+
+    if (isEmployee) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleBackToOverview} data-testid="button-back-overview-comp">
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Overzicht
+            </Button>
+            <h3 className="font-semibold text-sm">Competenties voor mijn functie</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Functie: <span className="font-medium text-foreground">{compFunctie}</span>
+          </p>
+          {(!manageCompetencies || manageCompetencies.length === 0) ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">Geen competenties gevonden voor &quot;{compFunctie}&quot;.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {manageCompetencies.map((comp, i) => (
+                <Card key={comp.id} className="border border-border/60">
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-sm font-medium">{i + 1}. {comp.name}</p>
+                    <div className="pl-4 space-y-1.5 border-t pt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Normering:</p>
+                      {[1, 2, 3, 4, 5].map(n => {
+                        const normVal = (comp as any)[`norm${n}`];
+                        return (
+                          <div key={n} className="flex items-start gap-2 text-xs">
+                            <Badge variant="outline" className="shrink-0 w-6 justify-center text-[10px] mt-0.5">{n}</Badge>
+                            <span className="shrink-0 font-medium text-muted-foreground min-w-[12rem]">{normLabels[n]}</span>
+                            <span className={normVal ? "text-foreground" : "text-muted-foreground/50 italic"}>{normVal || "—"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -1411,6 +1460,12 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+          {isEmployee && currentUser?.functie && (
+            <Button variant="outline" onClick={() => { setCompFunctie(currentUser.functie || ""); setViewMode("competencies"); }} data-testid="button-view-my-competencies">
+              <Eye className="h-4 w-4 mr-2" />
+              Mijn Competenties
+            </Button>
+          )}
           {canEdit && (
             <div className="flex gap-2">
               {isAdmin && (
