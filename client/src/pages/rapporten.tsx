@@ -103,6 +103,10 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Medewerker Informatie</h1>
+        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
+      </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
           Overzicht van medewerkergegevens — {active.length} actieve medewerkers
@@ -237,6 +241,10 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Verjaardagen</h1>
+        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
+      </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
           Verjaardagen van actieve medewerkers — klik op kolomhoofd om te sorteren
@@ -319,6 +327,10 @@ function JubileaTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Jubilea</h1>
+        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
+      </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
           Dienstjaren van actieve medewerkers — gesorteerd op hoogste aantal jaren
@@ -494,6 +506,10 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-6">
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Medewerker Status</h1>
+        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
+      </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
           Twee afzonderlijke rapporten: actief en niet-actief personeel. Kies de sorteervolgorde of selecteer een persoon.
@@ -576,6 +592,10 @@ function GezinTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Gezinsrapport</h1>
+        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
+      </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
           Gezinsgegevens van vaste medewerkers — partner en kinderen
