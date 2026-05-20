@@ -2743,18 +2743,6 @@ export default function BeloningenPage() {
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
     const origTitle = document.title;
     const onBefore = () => { document.title = ""; };
@@ -2766,6 +2754,18 @@ export default function BeloningenPage() {
       window.removeEventListener("afterprint",  onAfter);
     };
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-auto h-full">
