@@ -2506,7 +2506,7 @@ export async function registerRoutes(
   });
 
   const publicSettingKeys = ["login_photo"];
-  const authSettingKeys = ["dashboard_photo", "rapporten_photo", "productie_photo"];
+  const authSettingKeys = ["dashboard_photo", "rapporten_photo", "productie_photo", "pwa_url"];
 
   const DEFAULT_LOGIN_PHOTO = "/uploads/App_pics/curacao_login.jpg";
 
@@ -2528,6 +2528,17 @@ export async function registerRoutes(
     }
     const value = await storage.getSiteSetting(req.params.key);
     res.json({ value });
+  });
+
+  app.put("/api/site-settings/pwa-url", requireAuth, async (req, res) => {
+    const userId = (req.session as any).userId;
+    const user = await storage.getUser(userId);
+    if (!user || !isAdminRole(user.role)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    const { url } = req.body as { url?: string };
+    await storage.setSiteSetting("pwa_url", url?.trim() || "");
+    res.json({ value: url?.trim() || "" });
   });
 
   app.post("/api/site-settings/dashboard-photo", requireAuth, uploadImage.single("photo"), async (req, res) => {

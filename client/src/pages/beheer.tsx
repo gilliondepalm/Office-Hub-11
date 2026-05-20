@@ -30,7 +30,7 @@ import {
   Shield, Save, Users, Camera, ImageIcon, KeyRound,
   Building2, Briefcase, Plus, Trash2, Pencil,
   FileText, Upload, ArrowUp, ArrowDown, ListOrdered, ExternalLink,
-  CheckCircle2, XCircle,
+  CheckCircle2, XCircle, Smartphone,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -198,6 +198,7 @@ function RechtenTab() {
   const productiePhotoInputRef = useRef<HTMLInputElement>(null);
   const pasfotoInputRef = useRef<HTMLInputElement>(null);
   const [pasfotoUserId, setPasfotoUserId] = useState<string | null>(null);
+  const [pwaUrlInput, setPwaUrlInput] = useState<string | null>(null);
   const { toast } = useToast();
 
   const uploadPasfotoMutation = useMutation({
@@ -276,6 +277,35 @@ function RechtenTab() {
       const res = await fetch("/api/site-settings/productie_photo", { credentials: "include" });
       if (!res.ok) return { value: null };
       return res.json();
+    },
+  });
+
+  const { data: pwaUrlSetting } = useQuery<{ value: string | null }>({
+    queryKey: ["/api/site-settings", "pwa_url"],
+    queryFn: async () => {
+      const res = await fetch("/api/site-settings/pwa_url", { credentials: "include" });
+      if (!res.ok) return { value: null };
+      return res.json();
+    },
+  });
+
+  const savePwaUrlMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const res = await fetch("/api/site-settings/pwa-url", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) throw new Error("Opslaan mislukt");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/site-settings", "pwa_url"] });
+      toast({ title: "PWA-URL opgeslagen", description: "De mobiele app-URL is bijgewerkt." });
+    },
+    onError: () => {
+      toast({ title: "Fout", description: "Opslaan is mislukt.", variant: "destructive" });
     },
   });
 
@@ -502,6 +532,42 @@ function RechtenTab() {
               </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-2 pb-3">
+          <Smartphone className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold text-sm">Mobiele App (PWA) URL</h3>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Vul hier de publieke URL van de mobiele PWA-app in. Op het Dashboard verschijnt dan automatisch een QR-code die medewerkers kunnen scannen om de app te installeren.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://mijn-pwa-app.replit.app"
+              value={pwaUrlInput ?? (pwaUrlSetting?.value ?? "")}
+              onChange={(e) => setPwaUrlInput(e.target.value)}
+              className="flex-1"
+              data-testid="input-pwa-url"
+            />
+            <Button
+              size="sm"
+              className="gap-2 shrink-0"
+              onClick={() => savePwaUrlMutation.mutate(pwaUrlInput ?? (pwaUrlSetting?.value ?? ""))}
+              disabled={savePwaUrlMutation.isPending}
+              data-testid="button-save-pwa-url"
+            >
+              <Save className="h-4 w-4" />
+              {savePwaUrlMutation.isPending ? "Opslaan..." : "Opslaan"}
+            </Button>
+          </div>
+          {pwaUrlSetting?.value && (
+            <p className="text-xs text-muted-foreground">
+              Huidige URL: <span className="font-medium text-foreground">{pwaUrlSetting.value}</span>
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

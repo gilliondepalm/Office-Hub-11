@@ -17,7 +17,9 @@ import {
   LogOut,
   Activity,
   Hourglass,
+  Smartphone,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { Announcement, Absence } from "@shared/schema";
@@ -81,6 +83,16 @@ export default function DashboardPage() {
       return res.json();
     },
   });
+
+  const { data: pwaUrlSetting } = useQuery<{ value: string | null }>({
+    queryKey: ["/api/site-settings", "pwa_url"],
+    queryFn: async () => {
+      const res = await fetch("/api/site-settings/pwa_url", { credentials: "include" });
+      if (!res.ok) return { value: null };
+      return res.json();
+    },
+  });
+  const pwaUrl = pwaUrlSetting?.value || null;
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -697,6 +709,39 @@ export default function DashboardPage() {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {pwaUrl && (
+          <Card className="border border-border/60" data-testid="card-pwa-qr">
+            <CardHeader className="flex flex-row items-center gap-2 pb-3">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/30">
+                <Smartphone className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="font-semibold text-sm">Mobiele App Installeren</h3>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex items-center gap-6">
+                <div className="shrink-0 p-2 bg-white rounded-lg border border-border/60">
+                  <QRCodeSVG value={pwaUrl} size={120} level="M" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Scan met uw telefoon</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Scan de QR-code met de camera van uw mobiele telefoon om de app te openen.
+                    Tik daarna op <span className="font-medium">"Voeg toe aan beginscherm"</span> om de app te installeren.
+                  </p>
+                  <a
+                    href={pwaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                  >
+                    {pwaUrl}
+                  </a>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
