@@ -4,10 +4,12 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { PageHero } from "@/components/page-hero";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -22,12 +24,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Users, Mail, Building2, Pencil, UserCheck, UserX, CalendarDays, Briefcase, TrendingUp, Trash2, GraduationCap, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Users, Mail, Building2, Pencil, UserCheck, UserX, CalendarDays, Briefcase, TrendingUp, Trash2, GraduationCap, CheckCircle2, Circle, Heart } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { User, Department, PositionHistory, PersonalDevelopment, JobFunction } from "@shared/schema";
+import type { User, Department, PositionHistory, PersonalDevelopment, JobFunction, FamilyMember } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
 import { isAdminRole } from "@shared/schema";
@@ -1198,6 +1200,68 @@ function InlinePersonalDevelopment({ user }: { user: User }) {
   );
 }
 
+type FamilyFormState = { type: string; naam: string; geboortedatum: string; cedulaNr: string; nationaliteit: string; adres: string };
+
+function FamilyMemberCard({ member, onEdit, onDelete, isDeleting }: { member: FamilyMember; onEdit: () => void; onDelete: () => void; isDeleting: boolean }) {
+  return (
+    <div className="border rounded-lg p-3 space-y-1.5 bg-muted/30">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-sm">{member.naam}</span>
+        <div className="flex gap-1">
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit} title="Bewerken">
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onDelete} disabled={isDeleting} title="Verwijderen">
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+        {member.geboortedatum && <span><span className="font-medium text-foreground/70">Geboortedatum:</span> {formatDate(member.geboortedatum)}</span>}
+        {member.cedulaNr && <span><span className="font-medium text-foreground/70">Cedula:</span> {member.cedulaNr}</span>}
+        {member.nationaliteit && <span><span className="font-medium text-foreground/70">Nationaliteit:</span> {member.nationaliteit}</span>}
+        {member.adres && <span className="col-span-2"><span className="font-medium text-foreground/70">Adres:</span> {member.adres}</span>}
+      </div>
+    </div>
+  );
+}
+
+function FamilyMemberForm({ value, onChange, onSave, onCancel, isPending, hideType }: { value: FamilyFormState; onChange: (v: FamilyFormState) => void; onSave: () => void; onCancel: () => void; isPending: boolean; hideType?: boolean }) {
+  const set = (key: keyof FamilyFormState) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [key]: e.target.value });
+  return (
+    <div className="border rounded-lg p-3 space-y-3 bg-background">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Naam *</label>
+          <Input value={value.naam} onChange={set("naam")} placeholder="Volledige naam" className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Geboortedatum</label>
+          <Input type="date" value={value.geboortedatum} onChange={set("geboortedatum")} className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Cedula nummer</label>
+          <Input value={value.cedulaNr} onChange={set("cedulaNr")} placeholder="bijv. 12345678" className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Nationaliteit</label>
+          <Input value={value.nationaliteit} onChange={set("nationaliteit")} placeholder="bijv. Curaçaos" className="h-8 text-sm" />
+        </div>
+        <div className="col-span-2 space-y-1">
+          <label className="text-xs font-medium">Adres</label>
+          <Input value={value.adres} onChange={set("adres")} placeholder="Straat en huisnummer, Woonplaats" className="h-8 text-sm" />
+        </div>
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button size="sm" variant="outline" onClick={onCancel}>Annuleren</Button>
+        <Button size="sm" onClick={onSave} disabled={isPending || !value.naam.trim()}>
+          {isPending ? "Opslaan..." : "Opslaan"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function PersonaliaPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createTitels, setCreateTitels] = useState<TitelEntry[]>([]);
@@ -1205,6 +1269,10 @@ export default function PersonaliaPage() {
   const [deactivateUser, setDeactivateUser] = useState<User | null>(null);
   const [historyUser, setHistoryUser] = useState<User | null>(null);
   const [devUser, setDevUser] = useState<User | null>(null);
+  const [familyUser, setFamilyUser] = useState<User | null>(null);
+  const [familyEditMember, setFamilyEditMember] = useState<FamilyMember | null>(null);
+  const [familyForm, setFamilyForm] = useState<{ type: string; naam: string; geboortedatum: string; cedulaNr: string; nationaliteit: string; adres: string }>({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" });
+  const [familyAddOpen, setFamilyAddOpen] = useState(false);
   const [personelTab, setPersonelTab] = useState<"actief" | "tijdelijk" | "oud">("actief");
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -1284,6 +1352,50 @@ export default function PersonaliaPage() {
     onError: (err: any) => {
       toast({ title: "Fout bij aanmaken", description: err.message, variant: "destructive" });
     },
+  });
+
+  const { data: familyMembers, refetch: refetchFamily } = useQuery<FamilyMember[]>({
+    queryKey: ["/api/family-members", familyUser?.id],
+    queryFn: () => apiRequest("GET", `/api/family-members/${familyUser?.id}`).then(r => r.json()),
+    enabled: !!familyUser,
+  });
+
+  const createFamilyMutation = useMutation({
+    mutationFn: async (data: { userId: string; type: string; naam: string; geboortedatum?: string | null; cedulaNr?: string | null; nationaliteit?: string | null; adres?: string | null }) => {
+      const res = await apiRequest("POST", "/api/family-members", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchFamily();
+      setFamilyAddOpen(false);
+      setFamilyEditMember(null);
+      setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" });
+      toast({ title: "Gezinslid toegevoegd" });
+    },
+    onError: (err: any) => toast({ title: "Fout", description: err.message, variant: "destructive" }),
+  });
+
+  const updateFamilyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<FamilyMember> }) => {
+      const res = await apiRequest("PATCH", `/api/family-members/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchFamily();
+      setFamilyEditMember(null);
+      setFamilyAddOpen(false);
+      setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" });
+      toast({ title: "Gezinslid bijgewerkt" });
+    },
+    onError: (err: any) => toast({ title: "Fout", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteFamilyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/family-members/${id}`);
+    },
+    onSuccess: () => { refetchFamily(); toast({ title: "Gezinslid verwijderd" }); },
+    onError: (err: any) => toast({ title: "Fout", description: err.message, variant: "destructive" }),
   });
 
   const activateMutation = useMutation({
@@ -1570,6 +1682,108 @@ export default function PersonaliaPage() {
         />
       )}
 
+      <Dialog open={!!familyUser} onOpenChange={(open) => { if (!open) { setFamilyUser(null); setFamilyAddOpen(false); setFamilyEditMember(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-rose-500" />
+              Gezin — {familyUser?.fullName}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Partner */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Partner</h3>
+              {!familyMembers?.find(m => m.type === "partner") && !familyAddOpen && (
+                <Button size="sm" variant="outline" onClick={() => { setFamilyForm({ type: "partner", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" }); setFamilyAddOpen(true); setFamilyEditMember(null); }}>
+                  <Plus className="h-3 w-3 mr-1" /> Partner toevoegen
+                </Button>
+              )}
+            </div>
+            {familyMembers?.filter(m => m.type === "partner").map(m => (
+              familyEditMember?.id === m.id ? (
+                <FamilyMemberForm
+                  key={m.id}
+                  value={familyForm}
+                  onChange={setFamilyForm}
+                  onSave={() => updateFamilyMutation.mutate({ id: m.id, data: { naam: familyForm.naam, geboortedatum: familyForm.geboortedatum || null, cedulaNr: familyForm.cedulaNr || null, nationaliteit: familyForm.nationaliteit || null, adres: familyForm.adres || null } })}
+                  onCancel={() => { setFamilyEditMember(null); setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" }); }}
+                  isPending={updateFamilyMutation.isPending}
+                  hideType
+                />
+              ) : (
+                <FamilyMemberCard
+                  key={m.id}
+                  member={m}
+                  onEdit={() => { setFamilyEditMember(m); setFamilyForm({ type: m.type, naam: m.naam, geboortedatum: m.geboortedatum || "", cedulaNr: m.cedulaNr || "", nationaliteit: m.nationaliteit || "", adres: m.adres || "" }); setFamilyAddOpen(false); }}
+                  onDelete={() => deleteFamilyMutation.mutate(m.id)}
+                  isDeleting={deleteFamilyMutation.isPending}
+                />
+              )
+            ))}
+            {familyAddOpen && familyForm.type === "partner" && (
+              <FamilyMemberForm
+                value={familyForm}
+                onChange={setFamilyForm}
+                onSave={() => createFamilyMutation.mutate({ userId: familyUser!.id, ...familyForm, geboortedatum: familyForm.geboortedatum || null, cedulaNr: familyForm.cedulaNr || null, nationaliteit: familyForm.nationaliteit || null, adres: familyForm.adres || null })}
+                onCancel={() => { setFamilyAddOpen(false); setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" }); }}
+                isPending={createFamilyMutation.isPending}
+                hideType
+              />
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Kinderen */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Kinderen</h3>
+              {!familyAddOpen && (
+                <Button size="sm" variant="outline" onClick={() => { setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" }); setFamilyAddOpen(true); setFamilyEditMember(null); }}>
+                  <Plus className="h-3 w-3 mr-1" /> Kind toevoegen
+                </Button>
+              )}
+            </div>
+            {familyMembers?.filter(m => m.type === "kind").length === 0 && !familyAddOpen && (
+              <p className="text-sm text-muted-foreground">Geen kinderen geregistreerd.</p>
+            )}
+            {familyMembers?.filter(m => m.type === "kind").map(m => (
+              familyEditMember?.id === m.id ? (
+                <FamilyMemberForm
+                  key={m.id}
+                  value={familyForm}
+                  onChange={setFamilyForm}
+                  onSave={() => updateFamilyMutation.mutate({ id: m.id, data: { naam: familyForm.naam, geboortedatum: familyForm.geboortedatum || null, cedulaNr: familyForm.cedulaNr || null, nationaliteit: familyForm.nationaliteit || null, adres: familyForm.adres || null } })}
+                  onCancel={() => { setFamilyEditMember(null); setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" }); }}
+                  isPending={updateFamilyMutation.isPending}
+                  hideType
+                />
+              ) : (
+                <FamilyMemberCard
+                  key={m.id}
+                  member={m}
+                  onEdit={() => { setFamilyEditMember(m); setFamilyForm({ type: m.type, naam: m.naam, geboortedatum: m.geboortedatum || "", cedulaNr: m.cedulaNr || "", nationaliteit: m.nationaliteit || "", adres: m.adres || "" }); setFamilyAddOpen(false); }}
+                  onDelete={() => deleteFamilyMutation.mutate(m.id)}
+                  isDeleting={deleteFamilyMutation.isPending}
+                />
+              )
+            ))}
+            {familyAddOpen && familyForm.type === "kind" && (
+              <FamilyMemberForm
+                value={familyForm}
+                onChange={setFamilyForm}
+                onSave={() => createFamilyMutation.mutate({ userId: familyUser!.id, ...familyForm, geboortedatum: familyForm.geboortedatum || null, cedulaNr: familyForm.cedulaNr || null, nationaliteit: familyForm.nationaliteit || null, adres: familyForm.adres || null })}
+                onCancel={() => { setFamilyAddOpen(false); setFamilyForm({ type: "kind", naam: "", geboortedatum: "", cedulaNr: "", nationaliteit: "", adres: "" }); }}
+                isPending={createFamilyMutation.isPending}
+                hideType
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {canEditPersonalia && (
         <div className="flex gap-1 border-b" data-testid="tabs-personalia">
           {([
@@ -1760,6 +1974,17 @@ export default function PersonaliaPage() {
                                       )}
                                       {canEditPersonalia && (
                                         <>
+                                          {u.role !== "tijdelijk" && (
+                                            <Button
+                                              size="icon"
+                                              variant="ghost"
+                                              onClick={() => { setFamilyUser(u); setFamilyAddOpen(false); setFamilyEditMember(null); }}
+                                              data-testid={`button-family-user-${u.id}`}
+                                              title="Gezin"
+                                            >
+                                              <Heart className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                          )}
                                           <Button
                                             size="icon"
                                             variant="ghost"

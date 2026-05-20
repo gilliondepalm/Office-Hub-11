@@ -766,3 +766,19 @@ export const insertCorrectieverzoekSchema = createInsertSchema(correctieverzoeke
 });
 export type InsertCorrectieverzoek = z.infer<typeof insertCorrectieverzoekSchema>;
 export type Correctieverzoek = typeof correctieverzoeken.$inferSelect;
+
+// ── Gezin (Family Members) ────────────────────────────────────────────────────
+export const familyMembers = pgTable("family_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  type: text("type").notNull(), // "partner" | "kind"
+  naam: text("naam").notNull(),
+  geboortedatum: date("geboortedatum"),
+  cedulaNr: text("cedula_nr"),
+  nationaliteit: text("nationaliteit"),
+  adres: text("adres"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true, createdAt: true });
+export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
+export type FamilyMember = typeof familyMembers.$inferSelect;

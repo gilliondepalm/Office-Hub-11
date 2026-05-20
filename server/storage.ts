@@ -5,7 +5,8 @@ import {
   users, events, announcements, departments, absences, absenceCancellations, rewards, applications, appAccess, messages,
   aoProcedures, aoInstructions, positionHistory, personalDevelopment, legislationLinks, caoDocuments, siteSettings,
   functioneringReviews, competencies, beoordelingReviews, beoordelingScores, jaarplanItems, jaarplanOnderdelen, jaarplanActies,
-  werktijden, overuurAanvragen, importLog, prikklokEventLog, correctieverzoeken,
+  werktijden, overuurAanvragen, importLog, prikklokEventLog, correctieverzoeken, familyMembers,
+  type FamilyMember, type InsertFamilyMember,
   type Werktijden, type InsertWerktijden,
   type OveruurAanvraag, type InsertOveruurAanvraag,
   type ImportLog, type InsertImportLog,
@@ -306,6 +307,11 @@ export interface IStorage {
   getCorrectieverzoeken(userId?: string): Promise<Correctieverzoek[]>;
   createCorrectieverzoek(verzoek: InsertCorrectieverzoek): Promise<Correctieverzoek>;
   updateCorrectieverzoek(id: string, data: Partial<Correctieverzoek>): Promise<Correctieverzoek>;
+
+  getFamilyMembersByUser(userId: string): Promise<FamilyMember[]>;
+  createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember>;
+  updateFamilyMember(id: string, data: Partial<InsertFamilyMember>): Promise<FamilyMember>;
+  deleteFamilyMember(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1742,6 +1748,26 @@ export class DatabaseStorage implements IStorage {
   async updateCorrectieverzoek(id: string, data: Partial<Correctieverzoek>): Promise<Correctieverzoek> {
     const [updated] = await db.update(correctieverzoeken).set(data).where(eq(correctieverzoeken.id, id)).returning();
     return updated;
+  }
+
+  async getFamilyMembersByUser(userId: string): Promise<FamilyMember[]> {
+    return db.select().from(familyMembers)
+      .where(eq(familyMembers.userId, userId))
+      .orderBy(familyMembers.createdAt);
+  }
+
+  async createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember> {
+    const [created] = await db.insert(familyMembers).values(member).returning();
+    return created;
+  }
+
+  async updateFamilyMember(id: string, data: Partial<InsertFamilyMember>): Promise<FamilyMember> {
+    const [updated] = await db.update(familyMembers).set(data).where(eq(familyMembers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteFamilyMember(id: string): Promise<void> {
+    await db.delete(familyMembers).where(eq(familyMembers.id, id));
   }
 }
 

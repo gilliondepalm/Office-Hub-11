@@ -40,6 +40,7 @@ import {
   insertOveruurAanvraagSchema,
   insertImportLogSchema,
   insertCorrectieverzoekSchema,
+  insertFamilyMemberSchema,
   isAdminRole,
   canManageVacation,
 } from "@shared/schema";
@@ -4048,6 +4049,40 @@ export async function registerRoutes(
         goedgekeurdDoor: currentUser.id,
       });
       res.json(updated);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  // ── Family Members ──────────────────────────────────────────────────────────
+  app.get("/api/family-members/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId);
+      if (!currentUser) return res.status(401).json({ message: "Niet ingelogd" });
+      const canAccess = isAdminRole(currentUser.role) || currentUser.role === "manager" || currentUser.id === req.params.userId;
+      if (!canAccess) return res.status(403).json({ message: "Geen toegang" });
+      const members = await storage.getFamilyMembersByUser(req.params.userId);
+      res.json(members);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.post("/api/family-members", requirePersonaliaAdmin, async (req, res) => {
+    try {
+      const parsed = insertFamilyMemberSchema.parse(req.body);
+      const member = await storage.createFamilyMember(parsed);
+      res.json(member);
+    } catch (err: any) { res.status(400).json({ message: err.message }); }
+  });
+
+  app.patch("/api/family-members/:id", requirePersonaliaAdmin, async (req, res) => {
+    try {
+      const member = await storage.updateFamilyMember(req.params.id, req.body);
+      res.json(member);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.delete("/api/family-members/:id", requirePersonaliaAdmin, async (req, res) => {
+    try {
+      await storage.deleteFamilyMember(req.params.id);
+      res.json({ message: "Verwijderd" });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
