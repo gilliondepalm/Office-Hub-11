@@ -362,6 +362,9 @@ function BalieMedewerkerTab() {
   const [maandIdx, setMaandIdx] = useState(11);
   const [startJaar, setStartJaar] = useState("2008");
   const [eindJaar,  setEindJaar]  = useState(HUIDIG_JAAR_S);
+  const [visibleBalie, setVisibleBalie] = useState<Set<string>>(
+    new Set(BALIE_PRODUCTEN.map(p => p.key))
+  );
 
   const { data: dbKmInfoRows } = useQuery<{ jaar: number; maand: number; kkp: number; db: number; sa: number; rm: number; re: number; km: number; ik: number }[]>({ queryKey: ['/api/trend-km-info'] });
   const dbKmInfoMap = useMemo(() => {
@@ -445,57 +448,37 @@ function BalieMedewerkerTab() {
         ))}
       </div>
 
-      {/* ── Situatieschets — aparte grafiek ── */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Situatieschets A4/A3 per jaar — cumulatief t/m {maandLabel}</CardTitle>
-          <CardDescription className="text-xs">Lijndiagram — Situatieschets afzonderlijk weergegeven</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div style={{ minWidth: jaren.length * 48 + 80 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={data} margin={{ top: 8, right: 20, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="jaar" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={48} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number, name: string) => [v.toLocaleString("nl"), name]} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line type="monotone" dataKey="sa" name="Situatieschets A4/A3" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ── Producttypen ── */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-xs text-muted-foreground font-medium mr-1">Producten:</span>
+        {BALIE_PRODUCTEN.map(p => {
+          const on = visibleBalie.has(p.key);
+          return (
+            <button
+              key={p.key}
+              onClick={() => setVisibleBalie(prev => {
+                const next = new Set(prev);
+                if (next.has(p.key)) next.delete(p.key); else next.add(p.key);
+                return next;
+              })}
+              className="px-2.5 py-0.5 rounded-full text-xs font-medium border transition-opacity"
+              style={{
+                borderColor: p.kleur,
+                background: on ? p.kleur : "transparent",
+                color: on ? "#fff" : p.kleur,
+                opacity: on ? 1 : 0.5,
+              }}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Situatieschets A4/A3 — staafdiagram per jaar (t/m {maandLabel})</CardTitle>
-          <CardDescription className="text-xs">Gecumuleerde waarde per jaar</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div style={{ minWidth: jaren.length * 48 + 80 }}>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data} margin={{ top: 4, right: 20, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="jaar" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={48} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number) => [v.toLocaleString("nl"), "Situatieschets A4/A3"]} />
-                  <Bar dataKey="sa" name="Situatieschets A4/A3" fill="#6366f1" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── Overige producttypen ── */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Overige producttypen per jaar — cumulatief t/m {maandLabel}</CardTitle>
-          <CardDescription className="text-xs">Lijndiagram — Regulier Meetbrief, Regulier Extractplan, Kadastrale Meetgegevens, Kadastrale Kaart Producten, Digitale bestanden, Inzage KAD</CardDescription>
+          <CardTitle className="text-sm font-medium">Producttypen per jaar — cumulatief t/m {maandLabel}</CardTitle>
+          <CardDescription className="text-xs">Lijndiagram — Situatieschets A4/A3, Regulier Meetbrief, Regulier Extractplan, Kadastrale Meetgegevens, Kadastrale Kaart Producten, Digitale bestanden, Inzage KAD</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -507,7 +490,7 @@ function BalieMedewerkerTab() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number, name: string) => [v.toLocaleString("nl"), name]} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {BALIE_PRODUCTEN.filter(p => p.key !== "sa").map(p => (
+                  {BALIE_PRODUCTEN.filter(p => visibleBalie.has(p.key)).map(p => (
                     <Line key={p.key} type="monotone" dataKey={p.key} name={p.label} stroke={p.kleur} strokeWidth={2} dot={{ r: 3 }} />
                   ))}
                 </LineChart>
@@ -519,8 +502,8 @@ function BalieMedewerkerTab() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Overige producttypen — gestapeld per jaar (t/m {maandLabel})</CardTitle>
-          <CardDescription className="text-xs">Totaaloverzicht excl. Situatieschets — gecumuleerd voor het geselecteerde maandpunt</CardDescription>
+          <CardTitle className="text-sm font-medium">Producttypen — gestapeld per jaar (t/m {maandLabel})</CardTitle>
+          <CardDescription className="text-xs">Gecumuleerd voor het geselecteerde maandpunt</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -532,7 +515,7 @@ function BalieMedewerkerTab() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number, name: string) => [v.toLocaleString("nl"), name]} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {BALIE_PRODUCTEN.filter(p => p.key !== "sa").map(p => (
+                  {BALIE_PRODUCTEN.filter(p => visibleBalie.has(p.key)).map(p => (
                     <Bar key={p.key} dataKey={p.key} name={p.label} fill={p.kleur} stackId="a" />
                   ))}
                 </BarChart>
