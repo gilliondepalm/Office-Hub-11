@@ -103,6 +103,7 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-4">
+      <style>{`@media print { @page { size: A4 landscape; margin: 1cm; } }`}</style>
       <div className="hidden print:block mb-4 border-b pb-3">
         <h1 className="text-xl font-bold">Kadaster Dashboard — Medewerker Informatie</h1>
         <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
@@ -161,14 +162,14 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
               </TableRow>
             ) : (
               sorted.map(u => (
-                <TableRow key={u.id} data-testid={`row-medewerker-info-${u.id}`}>
-                  <TableCell className="text-sm font-mono">{u.kadasterId || "—"}</TableCell>
-                  <TableCell className="font-medium">{u.fullName}</TableCell>
-                  <TableCell className="text-sm">{u.department || "—"}</TableCell>
-                  <TableCell className="text-sm">{u.cedulaNr || "—"}</TableCell>
-                  <TableCell className="text-sm">{u.telefoonnr || "—"}</TableCell>
-                  <TableCell className="text-sm">{u.mobielnr || "—"}</TableCell>
-                  <TableCell className="text-sm">{u.adres || "—"}</TableCell>
+                <TableRow key={u.id} data-testid={`row-medewerker-info-${u.id}`} className="print:text-xs">
+                  <TableCell className="text-sm font-mono print:py-1">{u.kadasterId || "—"}</TableCell>
+                  <TableCell className="font-medium print:py-1">{u.fullName}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.department || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.cedulaNr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.telefoonnr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.mobielnr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.adres || "—"}</TableCell>
                 </TableRow>
               ))
             )}
@@ -592,6 +593,7 @@ function GezinTab({ users }: { users: UserExt[] }) {
 
   return (
     <div className="space-y-4">
+      <style>{`@media print { @page { size: A4 landscape; margin: 1cm; } }`}</style>
       <div className="hidden print:block mb-4 border-b pb-3">
         <h1 className="text-xl font-bold">Kadaster Dashboard — Gezinsrapport</h1>
         <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
@@ -655,27 +657,27 @@ function GezinTab({ users }: { users: UserExt[] }) {
                   <TableRow
                     key={m.id}
                     data-testid={`row-gezin-${m.id}`}
-                    className={idx === 0 ? "border-t-2 border-t-muted" : ""}
+                    className={`print:text-xs${idx === 0 ? " border-t-2 border-t-muted" : ""}`}
                   >
-                    <TableCell className="font-medium align-top text-sm">
+                    <TableCell className="font-medium align-top text-sm print:py-1">
                       {idx === 0 ? u.fullName : ""}
                     </TableCell>
-                    <TableCell className="align-top text-sm text-muted-foreground">
+                    <TableCell className="align-top text-sm text-muted-foreground print:py-1">
                       {idx === 0 ? (u.department || "—") : ""}
                     </TableCell>
-                    <TableCell className="align-top">
+                    <TableCell className="align-top print:py-1">
                       <Badge
                         variant={m.type === "partner" ? "default" : "secondary"}
-                        className="text-xs"
+                        className="text-xs print:border print:bg-transparent print:text-black print:border-gray-400"
                       >
                         {m.type === "partner" ? "Partner" : "Kind"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm font-medium">{m.naam}</TableCell>
-                    <TableCell className="text-sm">{m.geboortedatum ? formatDateDutch(m.geboortedatum) : "—"}</TableCell>
-                    <TableCell className="text-sm font-mono">{m.cedulaNr || "—"}</TableCell>
-                    <TableCell className="text-sm">{m.nationaliteit || "—"}</TableCell>
-                    <TableCell className="text-sm">{m.adres || "—"}</TableCell>
+                    <TableCell className="text-sm font-medium print:py-1">{m.naam}</TableCell>
+                    <TableCell className="text-sm print:py-1">{m.geboortedatum ? formatDateDutch(m.geboortedatum) : "—"}</TableCell>
+                    <TableCell className="text-sm font-mono print:py-1">{m.cedulaNr || "—"}</TableCell>
+                    <TableCell className="text-sm print:py-1">{m.nationaliteit || "—"}</TableCell>
+                    <TableCell className="text-sm print:py-1">{m.adres || "—"}</TableCell>
                   </TableRow>
                 ));
               })}
