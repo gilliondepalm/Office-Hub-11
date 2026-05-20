@@ -49,6 +49,7 @@ const userFormSchema = z.object({
   role: z.string().default("employee"),
   department: z.string().optional(),
   startDate: z.string().min(1, "Datum in dienst is verplicht"),
+  endDate: z.string().optional(),
   birthDate: z.string().optional(),
   phoneExtension: z.string().max(4, "Maximaal 4 cijfers").optional(),
   functie: z.string().optional(),
@@ -73,6 +74,7 @@ const editFormSchema = z.object({
   role: z.string(),
   department: z.string().optional(),
   startDate: z.string().min(1, "Datum in dienst is verplicht"),
+  endDate: z.string().optional(),
   birthDate: z.string().optional(),
   phoneExtension: z.string().max(4, "Maximaal 4 cijfers").optional(),
   functie: z.string().optional(),
@@ -205,6 +207,7 @@ function EditDialog({
       role: user.role,
       department: user.department || "",
       startDate: user.startDate || "",
+      endDate: (user as any).endDate || "",
       birthDate: user.birthDate || "",
       phoneExtension: user.phoneExtension || "",
       functie: user.functie || "",
@@ -217,6 +220,7 @@ function EditDialog({
     },
   });
   const watchEditStartDate = form.watch("startDate");
+  const watchEditRole = form.watch("role");
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof editFormSchema>) => {
@@ -240,6 +244,7 @@ function EditDialog({
         role: data.role,
         department: data.department || null,
         startDate: data.startDate,
+        endDate: data.role === "tijdelijk" ? (data.endDate || null) : undefined,
         birthDate: data.birthDate || null,
         phoneExtension: data.phoneExtension || null,
         functie: (data.functie === "none" || !data.functie) ? null : data.functie,
@@ -381,6 +386,15 @@ function EditDialog({
                 </FormItem>
               )} />
             </div>
+            {watchEditRole === "tijdelijk" && (
+              <FormField control={form.control} name="endDate" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Datum einde dienstcontract</FormLabel>
+                  <FormControl><Input {...field} type="date" data-testid="input-edit-enddate" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
             <FormField control={form.control} name="phoneExtension" render={({ field }) => (
               <FormItem>
                 <FormLabel>Toestelnummer</FormLabel>
@@ -1220,11 +1234,13 @@ export default function PersonaliaPage() {
       voornamen: "", voorvoegsel: "", achternaam: "",
       email: "", role: "employee", department: "",
       startDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
+      endDate: "",
       birthDate: "", phoneExtension: "", functie: "",
       kadasterId: "", cedulaNr: "", telefoonnr: "", mobielnr: "", adres: "",
     },
   });
   const watchCreateStartDate = createForm.watch("startDate");
+  const watchCreateRole = createForm.watch("role");
 
   const createMutation = useMutation({
     mutationFn: async (data: z.infer<typeof userFormSchema>) => {
@@ -1249,7 +1265,7 @@ export default function PersonaliaPage() {
         titelsAchter,
         avatar: null,
         active: true,
-        endDate: null,
+        endDate: data.endDate || null,
       });
       return res.json();
     },
@@ -1437,6 +1453,15 @@ export default function PersonaliaPage() {
                       </FormItem>
                     )} />
                   </div>
+                  {watchCreateRole === "tijdelijk" && (
+                    <FormField control={createForm.control} name="endDate" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Datum einde dienstcontract</FormLabel>
+                        <FormControl><Input {...field} type="date" data-testid="input-user-enddate" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
                   <FormField control={createForm.control} name="phoneExtension" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Toestelnummer</FormLabel>
@@ -1698,8 +1723,8 @@ export default function PersonaliaPage() {
                                         <span className="text-sm text-muted-foreground">-</span>
                                       )}
                                       {u.endDate && (
-                                        <span className="text-xs text-muted-foreground">
-                                          Uit: {formatDate(u.endDate)}
+                                        <span className={`text-xs ${u.role === "tijdelijk" && u.active ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground"}`}>
+                                          {u.role === "tijdelijk" && u.active ? `Einde contract: ${formatDate(u.endDate)}` : `Uit: ${formatDate(u.endDate)}`}
                                         </span>
                                       )}
                                     </div>
