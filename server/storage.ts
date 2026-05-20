@@ -308,6 +308,7 @@ export interface IStorage {
   createCorrectieverzoek(verzoek: InsertCorrectieverzoek): Promise<Correctieverzoek>;
   updateCorrectieverzoek(id: string, data: Partial<Correctieverzoek>): Promise<Correctieverzoek>;
 
+  getAllFamilyMembers(): Promise<FamilyMember[]>;
   getFamilyMembersByUser(userId: string): Promise<FamilyMember[]>;
   createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember>;
   updateFamilyMember(id: string, data: Partial<InsertFamilyMember>): Promise<FamilyMember>;
@@ -1748,6 +1749,10 @@ export class DatabaseStorage implements IStorage {
   async updateCorrectieverzoek(id: string, data: Partial<Correctieverzoek>): Promise<Correctieverzoek> {
     const [updated] = await db.update(correctieverzoeken).set(data).where(eq(correctieverzoeken.id, id)).returning();
     return updated;
+  }
+
+  async getAllFamilyMembers(): Promise<FamilyMember[]> {
+    return db.select().from(familyMembers).orderBy(familyMembers.userId, familyMembers.type, familyMembers.createdAt);
   }
 
   async getFamilyMembersByUser(userId: string): Promise<FamilyMember[]> {

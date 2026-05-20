@@ -4053,6 +4053,17 @@ export async function registerRoutes(
   });
 
   // ── Family Members ──────────────────────────────────────────────────────────
+  app.get("/api/family-members", requireAuth, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId);
+      if (!currentUser) return res.status(401).json({ message: "Niet ingelogd" });
+      const canAccess = isAdminRole(currentUser.role) || currentUser.role === "manager" || currentUser.role === "manager_az";
+      if (!canAccess) return res.status(403).json({ message: "Geen toegang" });
+      const members = await storage.getAllFamilyMembers();
+      res.json(members);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
   app.get("/api/family-members/:userId", requireAuth, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.session.userId);

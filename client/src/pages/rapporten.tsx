@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, Users, Cake, Award, ActivitySquare, ArrowUpDown, UserSearch } from "lucide-react";
+import { Printer, Users, Cake, Award, ActivitySquare, ArrowUpDown, UserSearch, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import type { User } from "@shared/schema";
+import type { User, FamilyMember } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 type UserExt = User & {
   kadasterId?: string | null;
@@ -547,6 +548,138 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
   );
 }
 
+function GezinTab({ users }: { users: UserExt[] }) {
+  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+
+  const { data: allFamilyMembers, isLoading } = useQuery<FamilyMember[]>({
+    queryKey: ["/api/family-members"],
+    queryFn: () => apiRequest("GET", "/api/family-members").then(r => r.json()),
+  });
+
+  const activeNonTemp = users.filter(u => u.active && u.role !== "tijdelijk");
+  const allSorted = [...activeNonTemp].sort((a, b) =>
+    (a.fullName || "").localeCompare(b.fullName || "", "nl")
+  );
+
+  const familyByUser: Record<string, FamilyMember[]> = {};
+  (allFamilyMembers || []).forEach(m => {
+    if (!familyByUser[m.userId]) familyByUser[m.userId] = [];
+    familyByUser[m.userId].push(m);
+  });
+
+  const filtered = selectedUserId === "all"
+    ? allSorted
+    : allSorted.filter(u => u.id === selectedUserId);
+
+  const withFamily = filtered.filter(u => (familyByUser[u.id] || []).length > 0);
+  const withoutFamily = filtered.filter(u => (familyByUser[u.id] || []).length === 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
+        <p className="text-sm text-muted-foreground">
+          Gezinsgegevens van vaste medewerkers — partner en kinderen
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <UserSearch className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger className="w-52" data-testid="select-gezin-person">
+              <SelectValue placeholder="Alle medewerkers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle medewerkers</SelectItem>
+              {allSorted.map(u => (
+                <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <PrintButton label="Afdrukken" />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : withFamily.length === 0 && selectedUserId !== "all" ? (
+        <div className="rounded-lg border bg-muted/30 p-8 text-center text-muted-foreground text-sm">
+          Geen gezinsgegevens geregistreerd voor deze medewerker.
+        </div>
+      ) : withFamily.length === 0 ? (
+        <div className="rounded-lg border bg-muted/30 p-8 text-center text-muted-foreground text-sm">
+          Er zijn nog geen gezinsgegevens ingevoerd.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="w-44">Medewerker</TableHead>
+                <TableHead className="w-32">Afdeling</TableHead>
+                <TableHead className="w-24">Relatie</TableHead>
+                <TableHead>Naam</TableHead>
+                <TableHead>Geboortedatum</TableHead>
+                <TableHead>Cedula nr.</TableHead>
+                <TableHead>Nationaliteit</TableHead>
+                <TableHead>Adres</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {withFamily.map(u => {
+                const members = familyByUser[u.id] || [];
+                const partner = members.filter(m => m.type === "partner");
+                const kinderen = members.filter(m => m.type === "kind");
+                const allMembers = [...partner, ...kinderen];
+                return allMembers.map((m, idx) => (
+                  <TableRow
+                    key={m.id}
+                    data-testid={`row-gezin-${m.id}`}
+                    className={idx === 0 ? "border-t-2 border-t-muted" : ""}
+                  >
+                    <TableCell className="font-medium align-top text-sm">
+                      {idx === 0 ? u.fullName : ""}
+                    </TableCell>
+                    <TableCell className="align-top text-sm text-muted-foreground">
+                      {idx === 0 ? (u.department || "—") : ""}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Badge
+                        variant={m.type === "partner" ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {m.type === "partner" ? "Partner" : "Kind"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium">{m.naam}</TableCell>
+                    <TableCell className="text-sm">{m.geboortedatum ? formatDateDutch(m.geboortedatum) : "—"}</TableCell>
+                    <TableCell className="text-sm font-mono">{m.cedulaNr || "—"}</TableCell>
+                    <TableCell className="text-sm">{m.nationaliteit || "—"}</TableCell>
+                    <TableCell className="text-sm">{m.adres || "—"}</TableCell>
+                  </TableRow>
+                ));
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {selectedUserId === "all" && withoutFamily.length > 0 && (
+        <details className="print:hidden">
+          <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground select-none">
+            {withoutFamily.length} medewerker{withoutFamily.length !== 1 ? "s" : ""} zonder geregistreerde gezinsgegevens
+          </summary>
+          <div className="mt-2 text-sm text-muted-foreground pl-4 space-y-1">
+            {withoutFamily.map(u => (
+              <div key={u.id}>{u.fullName} — {u.department || "Geen afdeling"}</div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export default function RapportenPage() {
   const { data: users, isLoading } = useQuery<UserExt[]>({ queryKey: ["/api/users"] });
   const { data: rapportenPhoto } = useQuery<{ value: string | null }>({
@@ -605,6 +738,10 @@ export default function RapportenPage() {
                 <ActivitySquare className="h-4 w-4 mr-2" />
                 Medewerker status
               </TabsTrigger>
+              <TabsTrigger value="gezin" data-testid="tab-gezin">
+                <Heart className="h-4 w-4 mr-2" />
+                Gezin
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="medewerker-info">
               <MedewerkerInfoTab users={users || []} />
@@ -617,6 +754,9 @@ export default function RapportenPage() {
             </TabsContent>
             <TabsContent value="medewerker-status">
               <MedewerkerStatusTab users={users || []} />
+            </TabsContent>
+            <TabsContent value="gezin">
+              <GezinTab users={users || []} />
             </TabsContent>
           </Tabs>
         )}
