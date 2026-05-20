@@ -622,6 +622,9 @@ function BalieM3Tab() {
   const [maandIdx, setMaandIdx]   = useState(11);
   const [startJaar, setStartJaar] = useState("2008");
   const [eindJaar,  setEindJaar]  = useState(HUIDIG_JAAR_S);
+  const [visibleOverige, setVisibleOverige] = useState<Set<string>>(
+    new Set(BALIE3_PRODUCTEN.map(p => p.key))
+  );
 
   const { data: dbOrInfoRows } = useQuery<{ jaar: number; maand: number; inzagen: number; her_inzage: number; na_inzage: number; kadastaal_legger: number; verklaring: number; getuigschrift: number }[]>({ queryKey: ['/api/trend-or-info'] });
   const dbOrInfoMap = useMemo(() => {
@@ -750,10 +753,36 @@ function BalieM3Tab() {
       </Card>
 
       {/* ── Overige producttypen ── */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-xs text-muted-foreground font-medium mr-1">Producten:</span>
+        {BALIE3_PRODUCTEN.map(p => {
+          const on = visibleOverige.has(p.key);
+          return (
+            <button
+              key={p.key}
+              onClick={() => setVisibleOverige(prev => {
+                const next = new Set(prev);
+                if (next.has(p.key)) next.delete(p.key); else next.add(p.key);
+                return next;
+              })}
+              className="px-2.5 py-0.5 rounded-full text-xs font-medium border transition-opacity"
+              style={{
+                borderColor: p.kleur,
+                background: on ? p.kleur : "transparent",
+                color: on ? "#fff" : p.kleur,
+                opacity: on ? 1 : 0.5,
+              }}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Overige producttypen per jaar — cumulatief t/m {maandLabel}</CardTitle>
-          <CardDescription className="text-xs">Lijndiagram — Her inzage, Na inzage, Kadastrale legger, Verklaring, Getuigschrift</CardDescription>
+          <CardTitle className="text-sm font-medium">Producttypen per jaar — cumulatief t/m {maandLabel}</CardTitle>
+          <CardDescription className="text-xs">Lijndiagram — Inzagen, Her inzage, Na inzage, Kadastrale legger, Verklaring, Getuigschrift</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -765,7 +794,7 @@ function BalieM3Tab() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: any, name: string) => [typeof v === "number" && isFinite(v) ? v.toLocaleString("nl") : v, name]} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {BALIE3_PRODUCTEN.filter(p => p.key !== "inzagen").map(p => (
+                  {BALIE3_PRODUCTEN.filter(p => visibleOverige.has(p.key)).map(p => (
                     <Line key={p.key} type="monotone" dataKey={p.key} name={p.label} stroke={p.kleur} strokeWidth={2} dot={{ r: 3 }} />
                   ))}
                 </LineChart>
@@ -777,8 +806,8 @@ function BalieM3Tab() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Overige producttypen — gestapeld per jaar (t/m {maandLabel})</CardTitle>
-          <CardDescription className="text-xs">Totaaloverzicht excl. Inzagen — gecumuleerd voor het geselecteerde maandpunt</CardDescription>
+          <CardTitle className="text-sm font-medium">Producttypen — gestapeld per jaar (t/m {maandLabel})</CardTitle>
+          <CardDescription className="text-xs">Gecumuleerd voor het geselecteerde maandpunt</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -790,7 +819,7 @@ function BalieM3Tab() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: any, name: string) => [typeof v === "number" && isFinite(v) ? v.toLocaleString("nl") : v, name]} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {BALIE3_PRODUCTEN.filter(p => p.key !== "inzagen").map(p => (
+                  {BALIE3_PRODUCTEN.filter(p => visibleOverige.has(p.key)).map(p => (
                     <Bar key={p.key} dataKey={p.key} name={p.label} fill={p.kleur} stackId="a" />
                   ))}
                 </BarChart>
