@@ -2755,14 +2755,28 @@ export default function BeloningenPage() {
     );
   }
 
+  useEffect(() => {
+    const origTitle = document.title;
+    const onBefore = () => { document.title = ""; };
+    const onAfter  = () => { document.title = origTitle; };
+    window.addEventListener("beforeprint", onBefore);
+    window.addEventListener("afterprint",  onAfter);
+    return () => {
+      window.removeEventListener("beforeprint", onBefore);
+      window.removeEventListener("afterprint",  onAfter);
+    };
+  }, []);
+
   return (
     <div className="overflow-auto h-full">
-      <PageHero
-        title="Beloningen"
-        subtitle="Functionering, beoordeling en beloning"
-        imageSrc="/uploads/App_pics/beloningen.jpg"
-        imageAlt="beloningen"
-      />
+      <div className="print:hidden">
+        <PageHero
+          title="Beloningen"
+          subtitle="Functionering, beoordeling en beloning"
+          imageSrc="/uploads/App_pics/beloningen.jpg"
+          imageAlt="beloningen"
+        />
+      </div>
       <div className="p-6 space-y-4">
       <div className="flex items-center justify-end gap-4 flex-wrap print:hidden">
         {activeTab === "beloningsysteem" && (isAdminRole(user?.role) || user?.role === "manager_az") && (
