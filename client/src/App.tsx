@@ -245,6 +245,7 @@ Meldingen:
 
 Overzicht:
 \u2022 Toont alle verwerkte aanvragen: goedgekeurd, afgewezen en gecanceld.
+\u2022 Sorteer de tabel door op een kolomkop te klikken: \u201cNr.\u201d (volgnummer), \u201cMedewerker\u201d (naam A\u2013Z) of \u201cPeriode / Datum\u201d (chronologisch). Klik nogmaals om de sorteervolgorde om te draaien.
 \u2022 Gecancelde aanvragen zijn klikbaar \u2014 klik op \u201cdetails\u201d om de annuleringsreden te bekijken.
 \u2022 Per-dag annuleringen verschijnen als aparte rijen met een oranje \u201cdag\u201d markering en de specifieke datum.
 
