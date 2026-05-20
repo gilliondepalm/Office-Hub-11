@@ -2657,7 +2657,7 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
                   <JaarplanItemCard
                     key={item.id}
                     item={item}
-                    canEdit={canEdit}
+                    canEdit={isAdmin || (isPureManager && item.afdeling === myDept)}
                     onEdit={() => handleEditItem(item)}
                     onDelete={() => deleteMutation.mutate(item.id)}
                   />

@@ -188,15 +188,18 @@ export interface IStorage {
   deleteBeoordelingScoresByReview(reviewId: string): Promise<void>;
 
   getJaarplanItemsByYear(year: number, afdeling?: string): Promise<JaarplanItem[]>;
+  getJaarplanItemById(id: string): Promise<JaarplanItem | undefined>;
   createJaarplanItem(item: InsertJaarplanItem): Promise<JaarplanItem>;
   updateJaarplanItem(id: string, data: Partial<InsertJaarplanItem>): Promise<JaarplanItem>;
   deleteJaarplanItem(id: string): Promise<void>;
   getJaarplanOnderdelen(jaarplanId: string): Promise<JaarplanOnderdeel[]>;
+  getJaarplanOnderdeelById(id: string): Promise<JaarplanOnderdeel | undefined>;
   createJaarplanOnderdeel(onderdeel: InsertJaarplanOnderdeel): Promise<JaarplanOnderdeel>;
   updateJaarplanOnderdeel(id: string, naam: string): Promise<JaarplanOnderdeel>;
   deleteJaarplanOnderdeel(id: string): Promise<void>;
   getJaarplanActies(jaarplanId: string): Promise<JaarplanActie[]>;
   getJaarplanActiesByOnderdeel(onderdeelId: string): Promise<JaarplanActie[]>;
+  getJaarplanActieById(id: string): Promise<JaarplanActie | undefined>;
   createJaarplanActie(actie: InsertJaarplanActie): Promise<JaarplanActie>;
   updateJaarplanActie(id: string, data: Partial<InsertJaarplanActie>): Promise<JaarplanActie>;
   deleteJaarplanActie(id: string): Promise<void>;
@@ -1192,6 +1195,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(jaarplanActies)
       .where(eq(jaarplanActies.onderdeelId, onderdeelId))
       .orderBy(jaarplanActies.datum);
+  }
+
+  async getJaarplanItemById(id: string): Promise<JaarplanItem | undefined> {
+    const [item] = await db.select().from(jaarplanItems).where(eq(jaarplanItems.id, id));
+    return item;
+  }
+
+  async getJaarplanOnderdeelById(id: string): Promise<JaarplanOnderdeel | undefined> {
+    const [onderdeel] = await db.select().from(jaarplanOnderdelen).where(eq(jaarplanOnderdelen.id, id));
+    return onderdeel;
+  }
+
+  async getJaarplanActieById(id: string): Promise<JaarplanActie | undefined> {
+    const [actie] = await db.select().from(jaarplanActies).where(eq(jaarplanActies.id, id));
+    return actie;
   }
 
   async createJaarplanActie(actie: InsertJaarplanActie): Promise<JaarplanActie> {

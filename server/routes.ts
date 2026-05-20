@@ -2629,6 +2629,30 @@ export async function registerRoutes(
   const canEditJaarplan = (role: string) =>
     isAdminRole(role) || role === "manager" || role === "manager_az";
 
+  const managerDeptAllowed = (user: any, afdeling: string) => {
+    if (isAdminRole(user.role) || user.role === "manager_az") return true;
+    if (user.role === "manager") return user.department === afdeling;
+    return false;
+  };
+
+  const getJaarplanAfdelingForItem = async (itemId: string): Promise<string | null> => {
+    const item = await storage.getJaarplanItemById(itemId);
+    return item ? item.afdeling : null;
+  };
+
+  const getJaarplanAfdelingForOnderdeel = async (onderdeelId: string): Promise<string | null> => {
+    const onderdeel = await storage.getJaarplanOnderdeelById(onderdeelId);
+    if (!onderdeel) return null;
+    return getJaarplanAfdelingForItem(onderdeel.jaarplanId);
+  };
+
+  const getJaarplanAfdelingForActie = async (actieId: string): Promise<string | null> => {
+    const actie = await storage.getJaarplanActieById(actieId);
+    if (!actie) return null;
+    if (actie.onderdeelId) return getJaarplanAfdelingForOnderdeel(actie.onderdeelId);
+    return getJaarplanAfdelingForItem(actie.jaarplanId);
+  };
+
   app.get("/api/jaarplan", requireAuth, async (req, res) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const user = (req as any).user;
@@ -2667,8 +2691,13 @@ export async function registerRoutes(
   });
 
   app.put("/api/jaarplan/:id", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForItem(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     try {
       const updated = await storage.updateJaarplanItem(req.params.id, req.body);
@@ -2679,8 +2708,13 @@ export async function registerRoutes(
   });
 
   app.delete("/api/jaarplan/:id", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForItem(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     await storage.deleteJaarplanItem(req.params.id);
     res.json({ success: true });
@@ -2696,6 +2730,10 @@ export async function registerRoutes(
     if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
     }
+    const afdeling = await getJaarplanAfdelingForItem(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
+    }
     try {
       const parsed = insertJaarplanActieSchema.parse({
         ...req.body,
@@ -2710,16 +2748,26 @@ export async function registerRoutes(
   });
 
   app.delete("/api/jaarplan/acties/:actieId", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForActie(req.params.actieId);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     await storage.deleteJaarplanActie(req.params.actieId);
     res.json({ success: true });
   });
 
   app.patch("/api/jaarplan/acties/:actieId", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForActie(req.params.actieId);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     try {
       const { status } = req.body;
@@ -2737,8 +2785,13 @@ export async function registerRoutes(
   });
 
   app.post("/api/jaarplan/:id/onderdelen", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForItem(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     try {
       const parsed = insertJaarplanOnderdeelSchema.parse({
@@ -2753,8 +2806,13 @@ export async function registerRoutes(
   });
 
   app.patch("/api/jaarplan/onderdelen/:id", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForOnderdeel(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     try {
       const { naam } = req.body;
@@ -2767,8 +2825,13 @@ export async function registerRoutes(
   });
 
   app.delete("/api/jaarplan/onderdelen/:id", requireAuth, async (req, res) => {
-    if (!canEditJaarplan((req as any).user.role)) {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForOnderdeel(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     await storage.deleteJaarplanOnderdeel(req.params.id);
     res.json({ success: true });
@@ -2783,6 +2846,10 @@ export async function registerRoutes(
     const user = (req as any).user;
     if (!canEditJaarplan(user.role)) {
       return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForOnderdeel(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     try {
       const parsed = insertJaarplanActieSchema.parse({
