@@ -1292,7 +1292,7 @@ export default function VerzuimPage() {
   const watchStartDate = form.watch("startDate");
   const watchEndDate = form.watch("endDate");
   const [activeTab, setActiveTab] = useState("meldingen");
-  const [overzichtSortCol, setOverzichtSortCol] = useState<"nr" | "date">("nr");
+  const [overzichtSortCol, setOverzichtSortCol] = useState<"nr" | "date" | "name">("nr");
   const [overzichtSortDir, setOverzichtSortDir] = useState<"asc" | "desc">("asc");
   const [printOpen, setPrintOpen] = useState(false);
   const [printFilter, setPrintFilter] = useState<"afdeling" | "medewerker">("afdeling");
@@ -2805,7 +2805,25 @@ export default function VerzuimPage() {
                                 : <ChevronUp className="h-3 w-3 opacity-30" />}
                             </button>
                           </TableHead>
-                          <TableHead>Medewerker</TableHead>
+                          <TableHead>
+                            <button
+                              className={`flex items-center gap-1 transition-colors ${overzichtSortCol === "name" ? "text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                              onClick={() => {
+                                if (overzichtSortCol === "name") {
+                                  setOverzichtSortDir(d => d === "asc" ? "desc" : "asc");
+                                } else {
+                                  setOverzichtSortCol("name");
+                                  setOverzichtSortDir("asc");
+                                }
+                              }}
+                              data-testid="button-sort-name"
+                            >
+                              Medewerker
+                              {overzichtSortCol === "name"
+                                ? (overzichtSortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)
+                                : <ChevronUp className="h-3 w-3 opacity-30" />}
+                            </button>
+                          </TableHead>
                           <TableHead>Type</TableHead>
                           <TableHead>
                             <button
@@ -2841,6 +2859,9 @@ export default function VerzuimPage() {
                                 const dA = a._kind === "absence" ? a.row.startDate : a.row.cancelledDate;
                                 const dB = b._kind === "absence" ? b.row.startDate : b.row.cancelledDate;
                                 return dA.localeCompare(dB) * dir;
+                              }
+                              if (overzichtSortCol === "name") {
+                                return (a.userName || "").localeCompare(b.userName || "", "nl") * dir;
                               }
                               const keyA = a._kind === "absence" ? `abs-${a.row.id}` : `dc-${a.row.id}`;
                               const keyB = b._kind === "absence" ? `abs-${b.row.id}` : `dc-${b.row.id}`;
