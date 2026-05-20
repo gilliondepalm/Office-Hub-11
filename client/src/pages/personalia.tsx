@@ -60,6 +60,7 @@ const userFormSchema = z.object({
   telefoonnr: z.string().optional(),
   mobielnr: z.string().optional(),
   adres: z.string().optional(),
+  cribNummer: z.string().optional().refine(v => !v || /^\d{9}$/.test(v), { message: "Moet uit precies 9 cijfers bestaan" }),
   gender: z.string().optional(),
 }).refine((data) => {
   if (data.birthDate && data.startDate && data.birthDate > data.startDate) return false;
@@ -85,6 +86,7 @@ const editFormSchema = z.object({
   telefoonnr: z.string().optional(),
   mobielnr: z.string().optional(),
   adres: z.string().optional(),
+  cribNummer: z.string().optional().refine(v => !v || /^\d{9}$/.test(v), { message: "Moet uit precies 9 cijfers bestaan" }),
   gender: z.string().optional(),
 }).refine((data) => {
   if (data.birthDate && data.startDate && data.birthDate > data.startDate) return false;
@@ -218,6 +220,7 @@ function EditDialog({
       telefoonnr: (user as any).telefoonnr || "",
       mobielnr: (user as any).mobielnr || "",
       adres: (user as any).adres || "",
+      cribNummer: (user as any).cribNummer || "",
       gender: (user as any).gender || "",
     },
   });
@@ -255,6 +258,7 @@ function EditDialog({
         telefoonnr: data.telefoonnr || null,
         mobielnr: data.mobielnr || null,
         adres: data.adres || null,
+        cribNummer: data.cribNummer || null,
         gender: data.gender || null,
         titelsVoor,
         titelsAchter,
@@ -453,6 +457,13 @@ function EditDialog({
                 </FormItem>
               )} />
             </div>
+            <FormField control={form.control} name="cribNummer" render={({ field }) => (
+              <FormItem>
+                <FormLabel>CRIB Nummer</FormLabel>
+                <FormControl><Input {...field} placeholder="9-cijferig CRIB nummer" maxLength={9} data-testid="input-edit-crib-nummer" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="telefoonnr" render={({ field }) => (
                 <FormItem>
@@ -1304,7 +1315,7 @@ export default function PersonaliaPage() {
       startDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
       endDate: "",
       birthDate: "", phoneExtension: "", functie: "",
-      kadasterId: "", cedulaNr: "", telefoonnr: "", mobielnr: "", adres: "",
+      kadasterId: "", cedulaNr: "", telefoonnr: "", mobielnr: "", adres: "", cribNummer: "",
     },
   });
   const watchCreateStartDate = createForm.watch("startDate");
@@ -1329,6 +1340,7 @@ export default function PersonaliaPage() {
         telefoonnr: data.telefoonnr || null,
         mobielnr: data.mobielnr || null,
         adres: data.adres || null,
+        cribNummer: data.cribNummer || null,
         titelsVoor,
         titelsAchter,
         avatar: null,
@@ -1613,6 +1625,13 @@ export default function PersonaliaPage() {
                       </FormItem>
                     )} />
                   </div>
+                  <FormField control={createForm.control} name="cribNummer" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CRIB Nummer</FormLabel>
+                      <FormControl><Input {...field} placeholder="9-cijferig CRIB nummer" maxLength={9} data-testid="input-user-crib-nummer" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                   <div className="grid grid-cols-2 gap-4">
                     <FormField control={createForm.control} name="telefoonnr" render={({ field }) => (
                       <FormItem>
