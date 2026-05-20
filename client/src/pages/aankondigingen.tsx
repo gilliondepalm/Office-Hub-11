@@ -632,7 +632,7 @@ export function useAankondigingenNotifications() {
   ).length;
 
   const newMessagesCount = (messagesData || []).filter(
-    m => (m.toUserId === userId || (m as any).fromUserId === userId) &&
+    m => m.toUserId === userId &&
       new Date((m as any).createdAt).getTime() > getLastSeen(userId, "messages")
   ).length;
 
@@ -686,7 +686,7 @@ export default function AankondigingenPage() {
   ).length;
 
   const newMessagesCount = (messagesData || []).filter(
-    m => (m.toUserId === userId || (m as any).fromUserId === userId) &&
+    m => m.toUserId === userId &&
       new Date((m as any).createdAt).getTime() > getLastSeen(userId, "messages")
   ).length;
 
