@@ -1293,15 +1293,19 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
                               </Button>
                             </div>
                           </div>
-                          <div className="mt-3 pl-4 space-y-1.5 border-t pt-3">
+                          <div className="mt-3 pl-4 space-y-2 border-t pt-3">
                             <p className="text-xs font-medium text-muted-foreground mb-2">Normering:</p>
                             {[1, 2, 3, 4, 5].map(n => {
                               const normVal = (comp as any)[`norm${n}`];
                               return (
                                 <div key={n} className="flex items-start gap-2 text-xs">
-                                  <Badge variant="outline" className="shrink-0 w-6 justify-center text-[10px] mt-0.5">{n}</Badge>
-                                  <span className="shrink-0 font-medium text-muted-foreground min-w-[12rem]">{normLabels[n]}</span>
-                                  <span className={`whitespace-pre-wrap ${normVal ? "text-foreground" : "text-muted-foreground/50 italic"}`}>{normVal || "—"}</span>
+                                  <div className="flex items-center gap-2 shrink-0 w-56">
+                                    <Badge variant="outline" className="shrink-0 w-6 justify-center text-[10px]">{n}</Badge>
+                                    <span className="font-medium text-muted-foreground">{normLabels[n]}</span>
+                                  </div>
+                                  <div className={`flex-1 min-h-[52px] rounded-md border px-3 py-2 whitespace-pre-wrap leading-relaxed ${normVal ? "border-border bg-muted/20 text-foreground" : "border-border/40 bg-transparent text-muted-foreground/50 italic"}`}>
+                                    {normVal || "—"}
+                                  </div>
                                 </div>
                               );
                             })}
