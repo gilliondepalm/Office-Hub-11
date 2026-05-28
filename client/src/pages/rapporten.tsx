@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, Users, Cake, Award, ActivitySquare, ArrowUpDown, UserSearch, Heart } from "lucide-react";
+import { Printer, Users, Cake, Award, ActivitySquare, ArrowUpDown, UserSearch } from "lucide-react";
+import { FamilyIcon } from "@/components/family-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -761,7 +762,7 @@ export default function RapportenPage() {
                 Medewerker status
               </TabsTrigger>
               <TabsTrigger value="gezin" data-testid="tab-gezin">
-                <Heart className="h-4 w-4 mr-2" />
+                <FamilyIcon className="h-4 w-4 mr-2" />
                 Gezin
               </TabsTrigger>
             </TabsList>

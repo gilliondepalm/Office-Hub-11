@@ -24,7 +24,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Users, Mail, Building2, Pencil, UserCheck, UserX, CalendarDays, Briefcase, TrendingUp, Trash2, GraduationCap, CheckCircle2, Circle, Heart } from "lucide-react";
+import { Plus, Users, Mail, Building2, Pencil, UserCheck, UserX, CalendarDays, Briefcase, TrendingUp, Trash2, GraduationCap, CheckCircle2, Circle } from "lucide-react";
+import { FamilyIcon } from "@/components/family-icon";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -1862,7 +1863,7 @@ export default function PersonaliaPage() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-rose-500" />
+              <FamilyIcon className="h-5 w-5 text-rose-500" />
               Gezin — {familyUser?.fullName}
             </DialogTitle>
           </DialogHeader>
@@ -2171,7 +2172,7 @@ export default function PersonaliaPage() {
                                               data-testid={`button-family-user-${u.id}`}
                                               title="Gezin"
                                             >
-                                              <Heart className="h-4 w-4 text-muted-foreground" />
+                                              <FamilyIcon className="h-4 w-4 text-muted-foreground" />
                                             </Button>
                                           )}
                                           <Button
