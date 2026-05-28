@@ -63,6 +63,7 @@ const userFormSchema = z.object({
   adres: z.string().optional(),
   cribNummer: z.string().optional().refine(v => !v || /^\d{9}$/.test(v), { message: "Moet uit precies 9 cijfers bestaan" }),
   gender: z.string().optional(),
+  paspoortnummer: z.string().optional(),
 }).refine((data) => {
   if (data.birthDate && data.startDate && data.birthDate > data.startDate) return false;
   return true;
@@ -90,6 +91,7 @@ const editFormSchema = z.object({
   adres: z.string().optional(),
   cribNummer: z.string().optional().refine(v => !v || /^\d{9}$/.test(v), { message: "Moet uit precies 9 cijfers bestaan" }),
   gender: z.string().optional(),
+  paspoortnummer: z.string().optional(),
 }).refine((data) => {
   if (data.birthDate && data.startDate && data.birthDate > data.startDate) return false;
   return true;
@@ -225,6 +227,7 @@ function EditDialog({
       adres: (user as any).adres || "",
       cribNummer: (user as any).cribNummer || "",
       gender: (user as any).gender || "",
+      paspoortnummer: (user as any).paspoortnummer || "",
     },
   });
   const watchEditStartDate = form.watch("startDate");
@@ -264,6 +267,7 @@ function EditDialog({
         adres: data.adres || null,
         cribNummer: data.cribNummer || null,
         gender: data.gender || null,
+        paspoortnummer: data.paspoortnummer || null,
         titelsVoor,
         titelsAchter,
       };
@@ -497,6 +501,13 @@ function EditDialog({
               <FormItem>
                 <FormLabel>Adres</FormLabel>
                 <FormControl><Input {...field} placeholder="Straat en huisnummer, Woonplaats" data-testid="input-edit-adres" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="paspoortnummer" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Paspoortnummer</FormLabel>
+                <FormControl><Input {...field} placeholder="Paspoortnummer" data-testid="input-edit-paspoortnummer" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -1446,6 +1457,8 @@ export default function PersonaliaPage() {
         mobielnr: data.mobielnr || null,
         adres: data.adres || null,
         cribNummer: data.cribNummer || null,
+        gender: data.gender || null,
+        paspoortnummer: data.paspoortnummer || null,
         titelsVoor,
         titelsAchter,
         avatar: null,
@@ -1766,6 +1779,29 @@ export default function PersonaliaPage() {
                     <FormItem>
                       <FormLabel>Adres</FormLabel>
                       <FormControl><Input {...field} placeholder="Straat en huisnummer, Woonplaats" data-testid="input-user-adres" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={createForm.control} name="gender" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Geslacht</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="input-user-gender"><SelectValue placeholder="Selecteer geslacht" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">— Niet opgegeven —</SelectItem>
+                          <SelectItem value="man">Man</SelectItem>
+                          <SelectItem value="vrouw">Vrouw</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={createForm.control} name="paspoortnummer" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Paspoortnummer</FormLabel>
+                      <FormControl><Input {...field} placeholder="Paspoortnummer" data-testid="input-user-paspoortnummer" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />

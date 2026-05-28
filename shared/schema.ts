@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   titelsAchter: text("titels_achter").array(),
   gender: text("gender"),
   emailPersoonlijk: text("email_persoonlijk"),
+  paspoortnummer: text("paspoortnummer"),
 });
 
 export const events = pgTable("events", {
