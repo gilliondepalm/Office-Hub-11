@@ -4,7 +4,7 @@ export function FamilyIcon({ className }: { className?: string }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -20,10 +20,6 @@ export function FamilyIcon({ className }: { className?: string }) {
       {/* Middle child (shorter, smaller head) */}
       <circle cx="12" cy="7" r="1.5" />
       <path d="M9.5 17v-2a2.5 2.5 0 0 1 5 0v2" />
-
-      {/* Plus sign — bottom right */}
-      <line x1="20.5" y1="19.5" x2="20.5" y2="23.5" />
-      <line x1="18.5" y1="21.5" x2="22.5" y2="21.5" />
     </svg>
   );
 }
