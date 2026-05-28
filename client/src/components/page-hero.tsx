@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface PageHeroProps {
   title: React.ReactNode;
@@ -11,6 +11,13 @@ interface PageHeroProps {
 
 export function PageHero({ title, subtitle, imageSrc, imageAlt, containerClassName, children }: PageHeroProps) {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current?.complete) {
+      setLoaded(true);
+    }
+  }, [imageSrc]);
 
   return (
     <div
@@ -19,6 +26,7 @@ export function PageHero({ title, subtitle, imageSrc, imageAlt, containerClassNa
       data-testid={`hero-${typeof imageAlt === "string" ? imageAlt.toLowerCase().replace(/\s/g, "-") : "page"}`}
     >
       <img
+        ref={imgRef}
         src={imageSrc}
         alt={typeof imageAlt === "string" ? imageAlt : "hero"}
         fetchPriority="high"
