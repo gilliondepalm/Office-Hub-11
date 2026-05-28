@@ -2172,7 +2172,7 @@ export default function PersonaliaPage() {
                                               data-testid={`button-family-user-${u.id}`}
                                               title="Gezin"
                                             >
-                                              <FamilyIcon className="h-4 w-4 text-muted-foreground" />
+                                              <FamilyIcon className="h-5 w-5 text-muted-foreground" />
                                             </Button>
                                           )}
                                           <Button
