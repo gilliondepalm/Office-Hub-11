@@ -905,6 +905,43 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/users/:id/rehire", requirePersonaliaAdmin, async (req, res) => {
+    try {
+      const oldUser = await storage.getUserById(req.params.id);
+      if (!oldUser) return res.status(404).json({ message: "Medewerker niet gevonden" });
+      if (oldUser.active) return res.status(400).json({ message: "Medewerker is al actief" });
+
+      const { startDate, username } = req.body;
+      if (!startDate) return res.status(400).json({ message: "Datum in dienst is verplicht" });
+      if (!username || username.trim() === "") return res.status(400).json({ message: "Gebruikersnaam is verplicht" });
+
+      const allUsers = await storage.getUsers();
+      if (allUsers.find((u: any) => u.username === username.trim())) {
+        return res.status(409).json({ message: `Gebruikersnaam "${username}" is al in gebruik` });
+      }
+
+      const nextKadasterId = await storage.getNextKadasterId();
+      const { id: _id, username: _un, startDate: _sd, endDate: _ed, active: _ac, kadasterId: _kid, vacationDaysSaldoOud: _vsaldo, vacationDaysCancel: _vcancel, ...rest } = oldUser as any;
+
+      const newUser = await storage.createUser({
+        ...rest,
+        username: username.trim(),
+        startDate,
+        endDate: null,
+        active: true,
+        kadasterId: nextKadasterId,
+        vacationDaysSaldoOud: 0,
+        vacationDaysCancel: 0,
+        permissions: oldUser.permissions ?? null,
+      } as any);
+
+      const { password: _, ...safeUser } = newUser;
+      res.json(safeUser);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Herplaatsing mislukt" });
+    }
+  });
+
   app.post("/api/users/:id/avatar", requirePersonaliaAdmin, (req: any, res: any, next: any) => {
     uploadPasfoto.single("photo")(req, res, (err: any) => {
       if (err) {

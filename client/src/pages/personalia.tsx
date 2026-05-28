@@ -573,6 +573,96 @@ function DeactivateDialog({
   );
 }
 
+const reHireFormSchema = z.object({
+  username: z.string().min(1, "Gebruikersnaam is verplicht"),
+  startDate: z.string().min(1, "Datum in dienst is verplicht"),
+});
+
+function ReHireDialog({
+  user,
+  open,
+  onOpenChange,
+}: {
+  user: User;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { toast } = useToast();
+  const form = useForm<z.infer<typeof reHireFormSchema>>({
+    resolver: zodResolver(reHireFormSchema),
+    defaultValues: {
+      username: (user.username ?? "") + "_2",
+      startDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
+    },
+  });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        username: (user.username ?? "") + "_2",
+        startDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
+      });
+    }
+  }, [open, user.username]);
+
+  const mutation = useMutation({
+    mutationFn: async (data: z.infer<typeof reHireFormSchema>) => {
+      const res = await apiRequest("POST", `/api/users/${user.id}/rehire`, {
+        username: data.username,
+        startDate: data.startDate,
+      });
+      return res.json();
+    },
+    onSuccess: (newUser: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Medewerker herplaatst",
+        description: `Nieuwe record aangemaakt voor ${formatNaamMetTitels(user)}${newUser?.kadasterId ? ` (Userid: ${newUser.kadasterId})` : ""}. Stel het wachtwoord en datum in dienst in via Bewerken.`,
+      });
+      onOpenChange(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Fout bij herplaatsen", description: err.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Medewerker Herplaatsen</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          De bestaande archiefrecord van <span className="font-medium text-foreground">{formatNaamMetTitels(user)}</span> blijft bewaard. Er wordt een nieuwe actieve record aangemaakt met dezelfde gegevens.
+        </p>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
+            <FormField control={form.control} name="username" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nieuwe gebruikersnaam</FormLabel>
+                <FormControl><Input {...field} data-testid="input-rehire-username" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="startDate" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Datum in Dienst</FormLabel>
+                <FormControl><Input {...field} type="date" data-testid="input-rehire-startdate" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <p className="text-xs text-muted-foreground">Na aanmaken kunt u via Bewerken het wachtwoord en overige gegevens aanpassen.</p>
+            <Button type="submit" className="w-full" disabled={mutation.isPending} data-testid="button-confirm-rehire">
+              {mutation.isPending ? "Aanmaken..." : "Nieuwe Record Aanmaken"}
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const positionFormSchema = z.object({
   functionTitle: z.string().min(1, "Functie is verplicht"),
   startDate: z.string().min(1, "Startdatum is verplicht"),
@@ -1291,6 +1381,7 @@ export default function PersonaliaPage() {
   const [createTitels, setCreateTitels] = useState<TitelEntry[]>([]);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deactivateUser, setDeactivateUser] = useState<User | null>(null);
+  const [reHireUser, setReHireUser] = useState<User | null>(null);
   const [historyUser, setHistoryUser] = useState<User | null>(null);
   const [devUser, setDevUser] = useState<User | null>(null);
   const [familyUser, setFamilyUser] = useState<User | null>(null);
@@ -1698,6 +1789,13 @@ export default function PersonaliaPage() {
         />
       )}
 
+      {reHireUser && (
+        <ReHireDialog
+          user={reHireUser}
+          open={!!reHireUser}
+          onOpenChange={(open) => { if (!open) setReHireUser(null); }}
+        />
+      )}
       {deactivateUser && (
         <DeactivateDialog
           user={deactivateUser}
@@ -2062,8 +2160,7 @@ export default function PersonaliaPage() {
                                               <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                onClick={() => activateMutation.mutate(u.id)}
-                                                disabled={activateMutation.isPending}
+                                                onClick={() => setReHireUser(u)}
                                                 data-testid={`button-activate-user-${u.id}`}
                                               >
                                                 <UserCheck className="h-4 w-4 text-muted-foreground" />
