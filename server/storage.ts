@@ -1354,8 +1354,8 @@ export class DatabaseStorage implements IStorage {
     const { jaar, maand } = rows[0];
     await db.delete(maandProdKartograaf)
       .where(and(eq(maandProdKartograaf.jaar, jaar), eq(maandProdKartograaf.maand, maand)));
-    if (rows.length > 0) {
-      await db.insert(maandProdKartograaf).values(rows);
+    for (const row of rows) {
+      await db.insert(maandProdKartograaf).values(row);
     }
   }
 
@@ -1410,7 +1410,9 @@ export class DatabaseStorage implements IStorage {
     if (rows.length === 0) return;
     const { jaar, maand } = rows[0];
     await db.delete(maandProdLandmeter).where(and(eq(maandProdLandmeter.jaar, jaar), eq(maandProdLandmeter.maand, maand)));
-    await db.insert(maandProdLandmeter).values(rows);
+    for (const row of rows) {
+      await db.insert(maandProdLandmeter).values(row);
+    }
   }
 
   async bulkUpsertMaandProdLandmeter(rows: InsertMaandProdLandmeter[]): Promise<void> {
@@ -1468,7 +1470,9 @@ export class DatabaseStorage implements IStorage {
     for (const m of maanden) {
       await db.delete(maandProdOrInfo).where(and(eq(maandProdOrInfo.jaar, jaar), eq(maandProdOrInfo.maand, m)));
     }
-    await db.insert(maandProdOrInfo).values(rows);
+    for (const row of rows) {
+      await db.insert(maandProdOrInfo).values(row);
+    }
   }
   async upsertTrendOrInfoRow(data: InsertTrendOrInfo): Promise<void> {
     const [existing] = await db.select().from(trendOrInfo)
@@ -1507,7 +1511,9 @@ export class DatabaseStorage implements IStorage {
     if (rows.length === 0) return;
     const { jaar, maand } = rows[0];
     await db.delete(maandProdOrNotaris).where(and(eq(maandProdOrNotaris.jaar, jaar), eq(maandProdOrNotaris.maand, maand)));
-    await db.insert(maandProdOrNotaris).values(rows);
+    for (const row of rows) {
+      await db.insert(maandProdOrNotaris).values(row);
+    }
   }
   async upsertTrendOrNotarisRow(data: InsertTrendOrNotaris): Promise<void> {
     const [existing] = await db.select().from(trendOrNotaris)
@@ -1529,7 +1535,9 @@ export class DatabaseStorage implements IStorage {
     for (const m of maanden) {
       await db.delete(maandProdKmInfo).where(and(eq(maandProdKmInfo.jaar, jaar), eq(maandProdKmInfo.maand, m)));
     }
-    await db.insert(maandProdKmInfo).values(rows);
+    for (const row of rows) {
+      await db.insert(maandProdKmInfo).values(row);
+    }
   }
   async getAllMaandProdKmInfo(): Promise<MaandProdKmInfo[]> {
     return await db.select().from(maandProdKmInfo).orderBy(maandProdKmInfo.jaar, maandProdKmInfo.maand);
