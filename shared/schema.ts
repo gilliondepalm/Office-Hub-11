@@ -38,6 +38,7 @@ export const users = pgTable("users", {
   titelsVoor: text("titels_voor").array(),
   titelsAchter: text("titels_achter").array(),
   gender: text("gender"),
+  emailPersoonlijk: text("email_persoonlijk"),
 });
 
 export const events = pgTable("events", {

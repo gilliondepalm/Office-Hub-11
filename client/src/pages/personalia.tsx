@@ -48,6 +48,7 @@ const userFormSchema = z.object({
   voorvoegsel: z.string().optional(),
   achternaam: z.string().min(1, "Achternaam is verplicht"),
   email: z.string().email("Ongeldig e-mailadres").or(z.literal("")).optional(),
+  emailPersoonlijk: z.string().email("Ongeldig e-mailadres").or(z.literal("")).optional(),
   role: z.string().default("employee"),
   department: z.string().optional(),
   startDate: z.string().min(1, "Datum in dienst is verplicht"),
@@ -74,6 +75,7 @@ const editFormSchema = z.object({
   voorvoegsel: z.string().optional(),
   achternaam: z.string().min(1, "Achternaam is verplicht"),
   email: z.string().email("Ongeldig e-mailadres").or(z.literal("")).optional(),
+  emailPersoonlijk: z.string().email("Ongeldig e-mailadres").or(z.literal("")).optional(),
   role: z.string(),
   department: z.string().optional(),
   startDate: z.string().min(1, "Datum in dienst is verplicht"),
@@ -208,6 +210,7 @@ function EditDialog({
       voorvoegsel: (user as any).voorvoegsel || "",
       achternaam: (user as any).achternaam || "",
       email: user.email,
+      emailPersoonlijk: (user as any).emailPersoonlijk || "",
       role: user.role,
       department: user.department || "",
       startDate: user.startDate || "",
@@ -246,6 +249,7 @@ function EditDialog({
         voorvoegsel: data.voorvoegsel || null,
         achternaam: data.achternaam,
         email: data.email || "",
+        emailPersoonlijk: data.emailPersoonlijk || null,
         role: data.role,
         department: data.department || null,
         startDate: data.startDate,
@@ -332,13 +336,22 @@ function EditDialog({
               )} />
             </div>
             <TitelsField titels={editTitels} onChange={setEditTitels} />
-            <FormField control={form.control} name="email" render={({ field }) => (
-              <FormItem>
-                <FormLabel>E-mail</FormLabel>
-                <FormControl><Input {...field} type="email" data-testid="input-edit-email" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>E-mail werk</FormLabel>
+                  <FormControl><Input {...field} type="email" data-testid="input-edit-email" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="emailPersoonlijk" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>E-mail persoonlijk</FormLabel>
+                  <FormControl><Input {...field} type="email" data-testid="input-edit-email-persoonlijk" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="role" render={({ field }) => (
                 <FormItem>
@@ -1311,7 +1324,7 @@ export default function PersonaliaPage() {
     defaultValues: {
       username: "", password: "",
       voornamen: "", voorvoegsel: "", achternaam: "",
-      email: "", role: "employee", department: "",
+      email: "", emailPersoonlijk: "", role: "employee", department: "",
       startDate: new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }),
       endDate: "",
       birthDate: "", phoneExtension: "", functie: "",
@@ -1332,6 +1345,7 @@ export default function PersonaliaPage() {
         voorvoegsel: data.voorvoegsel || null,
         achternaam: data.achternaam,
         email: data.email || "",
+        emailPersoonlijk: data.emailPersoonlijk || null,
         department: data.department || null,
         birthDate: data.birthDate || null,
         phoneExtension: data.phoneExtension || null,
@@ -1501,13 +1515,22 @@ export default function PersonaliaPage() {
                     )} />
                   </div>
                   <TitelsField titels={createTitels} onChange={setCreateTitels} />
-                  <FormField control={createForm.control} name="email" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>E-mail</FormLabel>
-                      <FormControl><Input {...field} type="email" data-testid="input-user-email" /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={createForm.control} name="email" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>E-mail werk</FormLabel>
+                        <FormControl><Input {...field} type="email" data-testid="input-user-email" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={createForm.control} name="emailPersoonlijk" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>E-mail persoonlijk</FormLabel>
+                        <FormControl><Input {...field} type="email" data-testid="input-user-email-persoonlijk" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField control={createForm.control} name="username" render={({ field }) => (
                       <FormItem>
@@ -1916,10 +1939,23 @@ export default function PersonaliaPage() {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                                      <Mail className="h-3 w-3" />
-                                      {u.email}
-                                    </span>
+                                    <div className="flex flex-col gap-0.5">
+                                      {u.email && (
+                                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                          <Mail className="h-3 w-3 shrink-0" />
+                                          <span title="E-mail werk">{u.email}</span>
+                                        </span>
+                                      )}
+                                      {(u as any).emailPersoonlijk && (
+                                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                          <Mail className="h-3 w-3 shrink-0 opacity-50" />
+                                          <span title="E-mail persoonlijk" className="opacity-75">{(u as any).emailPersoonlijk}</span>
+                                        </span>
+                                      )}
+                                      {!u.email && !(u as any).emailPersoonlijk && (
+                                        <span className="text-xs text-muted-foreground">-</span>
+                                      )}
+                                    </div>
                                   </TableCell>
                                   <TableCell>
                                     <span className="text-sm text-muted-foreground" data-testid={`text-functie-${u.id}`}>
