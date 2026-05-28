@@ -1863,7 +1863,7 @@ export default function PersonaliaPage() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FamilyIcon className="h-5 w-5 text-rose-500" />
+              <FamilyIcon className="h-6 w-6 text-rose-500" />
               Gezin — {familyUser?.fullName}
             </DialogTitle>
           </DialogHeader>
@@ -2172,7 +2172,7 @@ export default function PersonaliaPage() {
                                               data-testid={`button-family-user-${u.id}`}
                                               title="Gezin"
                                             >
-                                              <FamilyIcon className="h-5 w-5 text-muted-foreground" />
+                                              <FamilyIcon className="h-6 w-6 text-muted-foreground" />
                                             </Button>
                                           )}
                                           <Button
