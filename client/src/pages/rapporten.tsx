@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, Users, Cake, Award, ActivitySquare, ArrowUpDown, UserSearch } from "lucide-react";
+import { Printer, Users, Cake, Award, ActivitySquare, UserSearch, Clock } from "lucide-react";
 import { FamilyIcon } from "@/components/family-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import type { User, FamilyMember } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 type UserExt = User & {
-  kadasterId?: string | null;
+  kadasterId?: number | null;
   cedulaNr?: string | null;
   telefoonnr?: string | null;
   mobielnr?: string | null;
@@ -30,21 +30,13 @@ const roleLabels: Record<string, string> = {
   manager: "Manager",
   manager_az: "Beheerder AZ",
   employee: "Medewerker",
+  tijdelijk: "Tijdelijk",
 };
 
 function formatDateDutch(dateStr: string | null | undefined) {
   if (!dateStr) return "—";
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function birthdaySort(a: UserExt, b: UserExt) {
-  if (!a.birthDate && !b.birthDate) return 0;
-  if (!a.birthDate) return 1;
-  if (!b.birthDate) return -1;
-  const [, am, ad] = a.birthDate.split("-");
-  const [, bm, bd] = b.birthDate.split("-");
-  return am !== bm ? parseInt(am) - parseInt(bm) : parseInt(ad) - parseInt(bd);
 }
 
 function yearsOfService(startDate: string | null | undefined) {
@@ -72,10 +64,46 @@ function PrintButton({ label }: { label: string }) {
   );
 }
 
-type InfoSortField = "afdeling" | "naam" | "voornamen" | "kadasterId";
+function SortHeader<T extends string>({
+  label, field, current, dir, onClick, className,
+}: {
+  label: string;
+  field: T;
+  current: T;
+  dir: "asc" | "desc";
+  onClick: (f: T) => void;
+  className?: string;
+}) {
+  const active = current === field;
+  return (
+    <TableHead
+      className={`cursor-pointer select-none hover:bg-muted/50 transition-colors${className ? ` ${className}` : ""}`}
+      onClick={() => onClick(field)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        <span className="text-xs text-muted-foreground">
+          {active ? (dir === "asc" ? "▲" : "▼") : "⇅"}
+        </span>
+      </span>
+    </TableHead>
+  );
+}
+
+function useSortState<T extends string>(defaultField: T, defaultDir: "asc" | "desc" = "asc") {
+  const [field, setField] = useState<T>(defaultField);
+  const [dir, setDir] = useState<"asc" | "desc">(defaultDir);
+  const handleSort = (f: T) => {
+    if (field === f) setDir(d => d === "asc" ? "desc" : "asc");
+    else { setField(f); setDir("asc"); }
+  };
+  return { field, dir, handleSort };
+}
+
+type InfoSortField = "kadasterId" | "naam" | "afdeling" | "cedulaNr" | "telefoonnr" | "mobielnr" | "adres";
 
 function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
-  const [sortField, setSortField] = useState<InfoSortField>("naam");
+  const { field: sortField, dir: sortDir, handleSort } = useSortState<InfoSortField>("naam");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
   const active = users.filter(u => u.active);
@@ -86,20 +114,32 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
   const filtered = selectedUserId === "all" ? active : active.filter(u => u.id === selectedUserId);
 
   const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
     switch (sortField) {
-      case "afdeling": {
-        const deptCmp = (a.department || "").localeCompare(b.department || "", "nl");
-        return deptCmp !== 0 ? deptCmp : (a.fullName || "").localeCompare(b.fullName || "", "nl");
-      }
-      case "naam":
-        return (a.fullName || "").localeCompare(b.fullName || "", "nl");
-      case "voornamen":
-        return ((a as any).voornamen || a.fullName || "").localeCompare((b as any).voornamen || b.fullName || "", "nl");
       case "kadasterId":
-        return ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
-      default:
-        return 0;
+        cmp = ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
+        break;
+      case "naam":
+        cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "afdeling":
+        cmp = (a.department || "").localeCompare(b.department || "", "nl");
+        if (cmp === 0) cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "cedulaNr":
+        cmp = ((a as any).cedulaNr || "").localeCompare((b as any).cedulaNr || "", "nl");
+        break;
+      case "telefoonnr":
+        cmp = ((a as any).telefoonnr || "").localeCompare((b as any).telefoonnr || "");
+        break;
+      case "mobielnr":
+        cmp = ((a as any).mobielnr || "").localeCompare((b as any).mobielnr || "");
+        break;
+      case "adres":
+        cmp = ((a as any).adres || "").localeCompare((b as any).adres || "", "nl");
+        break;
     }
+    return sortDir === "asc" ? cmp : -cmp;
   });
 
   return (
@@ -111,7 +151,7 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
       </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
-          Overzicht van medewerkergegevens — {active.length} actieve medewerkers
+          Overzicht van medewerkergegevens — {active.length} actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <UserSearch className="h-4 w-4 text-muted-foreground" />
@@ -126,18 +166,6 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
               ))}
             </SelectContent>
           </Select>
-          <ArrowUpDown className="h-4 w-4 text-muted-foreground ml-1" />
-          <Select value={sortField} onValueChange={(v) => setSortField(v as InfoSortField)}>
-            <SelectTrigger className="w-44" data-testid="select-info-sort">
-              <SelectValue placeholder="Sorteren op…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="afdeling">Afdeling</SelectItem>
-              <SelectItem value="naam">Naam</SelectItem>
-              <SelectItem value="voornamen">Voornamen</SelectItem>
-              <SelectItem value="kadasterId">Kadaster ID</SelectItem>
-            </SelectContent>
-          </Select>
           <PrintButton label="Afdrukken" />
         </div>
       </div>
@@ -145,13 +173,13 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Kadaster ID</TableHead>
-              <TableHead>Naam</TableHead>
-              <TableHead>Afdeling</TableHead>
-              <TableHead>Cedulanr.</TableHead>
-              <TableHead>Telefoonnr.</TableHead>
-              <TableHead>Mobielnr.</TableHead>
-              <TableHead>Adres</TableHead>
+              <SortHeader label="Kadaster ID" field="kadasterId" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Cedulanr." field="cedulaNr" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Telefoonnr." field="telefoonnr" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Mobielnr." field="mobielnr" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Adres" field="adres" current={sortField} dir={sortDir} onClick={handleSort} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -164,13 +192,13 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
             ) : (
               sorted.map(u => (
                 <TableRow key={u.id} data-testid={`row-medewerker-info-${u.id}`} className="print:text-xs">
-                  <TableCell className="text-sm font-mono print:py-1">{u.kadasterId || "—"}</TableCell>
+                  <TableCell className="text-sm font-mono print:py-1">{u.kadasterId ?? "—"}</TableCell>
                   <TableCell className="font-medium print:py-1">{u.fullName}</TableCell>
                   <TableCell className="text-sm print:py-1">{u.department || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{u.cedulaNr || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{u.telefoonnr || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{u.mobielnr || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{u.adres || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).cedulaNr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).telefoonnr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).mobielnr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).adres || "—"}</TableCell>
                 </TableRow>
               ))
             )}
@@ -181,32 +209,10 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
   );
 }
 
-type SortField = "naam" | "geboortedatum";
-type SortDir = "asc" | "desc";
-
-function SortHeader({
-  label, field, current, dir, onClick,
-}: { label: string; field: SortField; current: SortField; dir: SortDir; onClick: (f: SortField) => void }) {
-  const active = current === field;
-  return (
-    <TableHead
-      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
-      onClick={() => onClick(field)}
-      data-testid={`sort-${field}`}
-    >
-      <span className="flex items-center gap-1">
-        {label}
-        <span className="text-xs text-muted-foreground">
-          {active ? (dir === "asc" ? "▲" : "▼") : "⇅"}
-        </span>
-      </span>
-    </TableHead>
-  );
-}
+type VerjaardagenSortField = "kadasterId" | "naam" | "geboortedatum" | "leeftijd";
 
 function VerjaardagenTab({ users }: { users: UserExt[] }) {
-  const [sortField, setSortField] = useState<SortField>("geboortedatum");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const { field: sortField, dir: sortDir, handleSort } = useSortState<VerjaardagenSortField>("geboortedatum");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
   const today = new Date();
@@ -222,24 +228,28 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
 
   const sorted = [...filtered].sort((a, b) => {
     let cmp = 0;
-    if (sortField === "naam") {
-      cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
-    } else {
-      const [, am, ad] = a.birthDate!.split("-");
-      const [, bm, bd] = b.birthDate!.split("-");
-      cmp = am !== bm ? parseInt(am) - parseInt(bm) : parseInt(ad) - parseInt(bd);
+    switch (sortField) {
+      case "kadasterId":
+        cmp = ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
+        break;
+      case "naam":
+        cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "geboortedatum": {
+        const [, am, ad] = a.birthDate!.split("-");
+        const [, bm, bd] = b.birthDate!.split("-");
+        cmp = am !== bm ? parseInt(am) - parseInt(bm) : parseInt(ad) - parseInt(bd);
+        break;
+      }
+      case "leeftijd": {
+        const ageA = today.getFullYear() - parseInt(a.birthDate!.split("-")[0]);
+        const ageB = today.getFullYear() - parseInt(b.birthDate!.split("-")[0]);
+        cmp = ageA - ageB;
+        break;
+      }
     }
     return sortDir === "asc" ? cmp : -cmp;
   });
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDir("asc");
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -249,7 +259,7 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
       </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
-          Verjaardagen van actieve medewerkers — klik op kolomhoofd om te sorteren
+          Verjaardagen van actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <UserSearch className="h-4 w-4 text-muted-foreground" />
@@ -271,10 +281,10 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Kadaster ID</TableHead>
+              <SortHeader label="Kadaster ID" field="kadasterId" current={sortField} dir={sortDir} onClick={handleSort} />
               <SortHeader label="Volledige naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
               <SortHeader label="Geboortedatum" field="geboortedatum" current={sortField} dir={sortDir} onClick={handleSort} />
-              <TableHead>Leeftijd</TableHead>
+              <SortHeader label="Leeftijd" field="leeftijd" current={sortField} dir={sortDir} onClick={handleSort} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -291,7 +301,7 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
                 const age = today.getFullYear() - parseInt(u.birthDate!.split("-")[0]);
                 return (
                   <TableRow key={u.id} data-testid={`row-verjaardag-${u.id}`} className={isToday ? "bg-yellow-50 dark:bg-yellow-950/30" : ""}>
-                    <TableCell className="text-sm font-mono">{u.kadasterId || "—"}</TableCell>
+                    <TableCell className="text-sm font-mono">{(u as any).kadasterId ?? "—"}</TableCell>
                     <TableCell className="font-medium">
                       {u.fullName}
                       {isToday && <span className="ml-2 text-yellow-600">🎂</span>}
@@ -309,7 +319,10 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
   );
 }
 
+type JubileumSortField = "naam" | "afdeling" | "startDate" | "dienstjaren";
+
 function JubileaTab({ users }: { users: UserExt[] }) {
+  const { field: sortField, dir: sortDir, handleSort } = useSortState<JubileumSortField>("dienstjaren", "desc");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
   const withStart = users.filter(u => u.active && u.startDate);
@@ -319,13 +332,27 @@ function JubileaTab({ users }: { users: UserExt[] }) {
 
   const filtered = selectedUserId === "all" ? withStart : withStart.filter(u => u.id === selectedUserId);
 
-  const sorted = [...filtered].sort((a, b) => {
-    const yA = yearsOfService(a.startDate) ?? 0;
-    const yB = yearsOfService(b.startDate) ?? 0;
-    return yB - yA;
-  });
-
   const milestones = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    switch (sortField) {
+      case "naam":
+        cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "afdeling":
+        cmp = (a.department || "").localeCompare(b.department || "", "nl");
+        if (cmp === 0) cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "startDate":
+        cmp = (a.startDate || "").localeCompare(b.startDate || "");
+        break;
+      case "dienstjaren":
+        cmp = (yearsOfService(a.startDate) ?? 0) - (yearsOfService(b.startDate) ?? 0);
+        break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <div className="space-y-4">
@@ -335,7 +362,7 @@ function JubileaTab({ users }: { users: UserExt[] }) {
       </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
-          Dienstjaren van actieve medewerkers — gesorteerd op hoogste aantal jaren
+          Dienstjaren van actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <UserSearch className="h-4 w-4 text-muted-foreground" />
@@ -357,10 +384,10 @@ function JubileaTab({ users }: { users: UserExt[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Naam</TableHead>
-              <TableHead>Afdeling</TableHead>
-              <TableHead>Datum in Dienst</TableHead>
-              <TableHead>Dienstjaren</TableHead>
+              <SortHeader label="Naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Datum in Dienst" field="startDate" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Dienstjaren" field="dienstjaren" current={sortField} dir={sortDir} onClick={handleSort} />
               <TableHead className="print:hidden">Jubileum</TableHead>
             </TableRow>
           </TableHeader>
@@ -403,71 +430,74 @@ function JubileaTab({ users }: { users: UserExt[] }) {
   );
 }
 
-type StatusSortField = "naam" | "afdeling" | "startDate" | "endDate" | "birthDate";
-
-function sortUsers(list: UserExt[], field: StatusSortField): UserExt[] {
-  return [...list].sort((a, b) => {
-    switch (field) {
-      case "naam":
-        return (a.fullName || "").localeCompare(b.fullName || "", "nl");
-      case "afdeling": {
-        const deptCmp = (a.department || "").localeCompare(b.department || "", "nl");
-        return deptCmp !== 0 ? deptCmp : (a.fullName || "").localeCompare(b.fullName || "", "nl");
-      }
-      case "startDate":
-        return (a.startDate || "").localeCompare(b.startDate || "");
-      case "endDate":
-        return (a.endDate || "9999").localeCompare(b.endDate || "9999");
-      case "birthDate":
-        return (a.birthDate || "").localeCompare(b.birthDate || "");
-      default:
-        return 0;
-    }
-  });
-}
+type StatusSortField = "naam" | "afdeling" | "functie" | "startDate" | "endDate" | "birthDate";
 
 function StatusRapport({
   title,
   users,
-  sortField,
   filterKey,
   selectedUserId,
 }: {
   title: string;
   users: UserExt[];
-  sortField: StatusSortField;
   filterKey: "actief" | "inactief";
   selectedUserId: string;
 }) {
+  const { field: sortField, dir: sortDir, handleSort } = useSortState<StatusSortField>("naam");
+
   const filtered = users.filter(u => {
     const matchStatus = filterKey === "actief" ? u.active : !u.active;
     const matchPerson = selectedUserId === "all" || u.id === selectedUserId;
     return matchStatus && matchPerson;
   });
-  const sorted = sortUsers(filtered, sortField);
+
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    switch (sortField) {
+      case "naam":
+        cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "afdeling":
+        cmp = (a.department || "").localeCompare(b.department || "", "nl");
+        if (cmp === 0) cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "functie":
+        cmp = (a.functie || "").localeCompare(b.functie || "", "nl");
+        break;
+      case "startDate":
+        cmp = (a.startDate || "").localeCompare(b.startDate || "");
+        break;
+      case "endDate":
+        cmp = (a.endDate || "9999").localeCompare(b.endDate || "9999");
+        break;
+      case "birthDate":
+        cmp = (a.birthDate || "").localeCompare(b.birthDate || "");
+        break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
-        <div className="flex items-center gap-2">
-          <Badge variant={filterKey === "actief" ? "default" : "secondary"} className="text-xs px-2 py-0.5">
-            {filterKey === "actief" ? "Actief" : "Niet actief"}
-          </Badge>
-          <span className="text-sm text-muted-foreground font-medium">{title}</span>
-          <span className="text-xs text-muted-foreground">({sorted.length} medewerker{sorted.length !== 1 ? "s" : ""})</span>
-        </div>
-        <PrintButton label="Afdrukken" />
+      <div className="flex items-center gap-2">
+        <Badge variant={filterKey === "actief" ? "default" : "secondary"} className="text-xs px-2 py-0.5">
+          {filterKey === "actief" ? "Actief" : "Niet actief"}
+        </Badge>
+        <span className="text-sm text-muted-foreground font-medium">{title}</span>
+        <span className="text-xs text-muted-foreground">({sorted.length} medewerker{sorted.length !== 1 ? "s" : ""})</span>
       </div>
       <div className="overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Naam</TableHead>
-              <TableHead>Afdeling</TableHead>
-              <TableHead>Functie</TableHead>
-              <TableHead>Datum in Dienst</TableHead>
-              {filterKey === "inactief" && <TableHead>Datum uit Dienst</TableHead>}
-              <TableHead>Geboortedatum</TableHead>
+              <SortHeader label="Naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Functie" field="functie" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Datum in Dienst" field="startDate" current={sortField} dir={sortDir} onClick={handleSort} />
+              {filterKey === "inactief" && (
+                <SortHeader label="Datum uit Dienst" field="endDate" current={sortField} dir={sortDir} onClick={handleSort} />
+              )}
+              <SortHeader label="Geboortedatum" field="birthDate" current={sortField} dir={sortDir} onClick={handleSort} />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -499,7 +529,6 @@ function StatusRapport({
 }
 
 function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
-  const [sortField, setSortField] = useState<StatusSortField>("naam");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
   const allSorted = [...users].sort((a, b) =>
@@ -514,7 +543,7 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
       </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
-          Twee afzonderlijke rapporten: actief en niet-actief personeel. Kies de sorteervolgorde of selecteer een persoon.
+          Twee afzonderlijke rapporten: actief en niet-actief personeel &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <UserSearch className="h-4 w-4 text-muted-foreground" />
@@ -529,26 +558,12 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
               ))}
             </SelectContent>
           </Select>
-          <ArrowUpDown className="h-4 w-4 text-muted-foreground ml-1" />
-          <Select value={sortField} onValueChange={(v) => setSortField(v as StatusSortField)}>
-            <SelectTrigger className="w-48" data-testid="select-status-sort">
-              <SelectValue placeholder="Sorteren op…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="afdeling">Afdeling</SelectItem>
-              <SelectItem value="naam">Persoon</SelectItem>
-              <SelectItem value="startDate">Datum in dienst</SelectItem>
-              <SelectItem value="endDate">Datum uit dienst</SelectItem>
-              <SelectItem value="birthDate">Geboortedatum</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
       <StatusRapport
         title="Actief personeel"
         users={users}
-        sortField={sortField}
         filterKey="actief"
         selectedUserId={selectedUserId}
       />
@@ -557,7 +572,6 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
         <StatusRapport
           title="Niet-actief personeel"
           users={users}
-          sortField={sortField}
           filterKey="inactief"
           selectedUserId={selectedUserId}
         />
@@ -566,7 +580,10 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
   );
 }
 
+type GezinSortField = "naam" | "afdeling";
+
 function GezinTab({ users }: { users: UserExt[] }) {
+  const { field: sortField, dir: sortDir, handleSort } = useSortState<GezinSortField>("naam");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
   const { data: allFamilyMembers, isLoading } = useQuery<FamilyMember[]>({
@@ -585,12 +602,20 @@ function GezinTab({ users }: { users: UserExt[] }) {
     familyByUser[m.userId].push(m);
   });
 
-  const filtered = selectedUserId === "all"
-    ? allSorted
-    : allSorted.filter(u => u.id === selectedUserId);
+  const baseList = selectedUserId === "all" ? allSorted : allSorted.filter(u => u.id === selectedUserId);
 
-  const withFamily = filtered.filter(u => (familyByUser[u.id] || []).length > 0);
-  const withoutFamily = filtered.filter(u => (familyByUser[u.id] || []).length === 0);
+  const sortedList = [...baseList].sort((a, b) => {
+    let cmp = 0;
+    if (sortField === "naam") cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+    else if (sortField === "afdeling") {
+      cmp = (a.department || "").localeCompare(b.department || "", "nl");
+      if (cmp === 0) cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const withFamily = sortedList.filter(u => (familyByUser[u.id] || []).length > 0);
+  const withoutFamily = sortedList.filter(u => (familyByUser[u.id] || []).length === 0);
 
   return (
     <div className="space-y-4">
@@ -638,8 +663,8 @@ function GezinTab({ users }: { users: UserExt[] }) {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
-                <TableHead className="w-44">Medewerker</TableHead>
-                <TableHead className="w-32">Afdeling</TableHead>
+                <SortHeader label="Medewerker" field="naam" current={sortField} dir={sortDir} onClick={handleSort} className="w-44" />
+                <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} className="w-32" />
                 <TableHead className="w-24">Relatie</TableHead>
                 <TableHead>Naam</TableHead>
                 <TableHead>Geboortedatum</TableHead>
@@ -703,6 +728,131 @@ function GezinTab({ users }: { users: UserExt[] }) {
   );
 }
 
+type TijdelijkSortField = "kadasterId" | "naam" | "afdeling" | "functie" | "startDate" | "endDate" | "status";
+
+function TijdelijkeTab({ users }: { users: UserExt[] }) {
+  const { field: sortField, dir: sortDir, handleSort } = useSortState<TijdelijkSortField>("naam");
+  const [statusFilter, setStatusFilter] = useState<"all" | "actief" | "inactief">("all");
+
+  const tijdelijk = users.filter(u => u.role === "tijdelijk");
+
+  const filtered = tijdelijk.filter(u => {
+    if (statusFilter === "actief") return u.active;
+    if (statusFilter === "inactief") return !u.active;
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    switch (sortField) {
+      case "kadasterId":
+        cmp = ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
+        break;
+      case "naam":
+        cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "afdeling":
+        cmp = (a.department || "").localeCompare(b.department || "", "nl");
+        if (cmp === 0) cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
+        break;
+      case "functie":
+        cmp = (a.functie || "").localeCompare(b.functie || "", "nl");
+        break;
+      case "startDate":
+        cmp = (a.startDate || "").localeCompare(b.startDate || "");
+        break;
+      case "endDate":
+        cmp = (a.endDate || "9999").localeCompare(b.endDate || "9999");
+        break;
+      case "status":
+        cmp = (a.active === b.active) ? 0 : a.active ? -1 : 1;
+        break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const activeCount = tijdelijk.filter(u => u.active).length;
+  const inactiveCount = tijdelijk.filter(u => !u.active).length;
+
+  return (
+    <div className="space-y-4">
+      <style>{`@media print { @page { size: A4 landscape; margin: 1cm; } }`}</style>
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Tijdelijke Medewerkers</h1>
+        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
+      </div>
+      <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
+        <div className="flex items-center gap-3 flex-wrap">
+          <p className="text-sm text-muted-foreground">
+            Overzicht tijdelijke medewerkers
+          </p>
+          <Badge variant="default" className="text-xs">{activeCount} actief</Badge>
+          <Badge variant="secondary" className="text-xs">{inactiveCount} niet actief</Badge>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="w-44" data-testid="select-tijdelijk-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle tijdelijk</SelectItem>
+              <SelectItem value="actief">Alleen actief</SelectItem>
+              <SelectItem value="inactief">Alleen niet actief</SelectItem>
+            </SelectContent>
+          </Select>
+          <PrintButton label="Afdrukken" />
+        </div>
+      </div>
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <SortHeader label="Kadaster ID" field="kadasterId" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Functie" field="functie" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="In dienst" field="startDate" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Uit dienst" field="endDate" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Status" field="status" current={sortField} dir={sortDir} onClick={handleSort} />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  {tijdelijk.length === 0
+                    ? "Geen tijdelijke medewerkers geregistreerd"
+                    : "Geen tijdelijke medewerkers gevonden voor dit filter"}
+                </TableCell>
+              </TableRow>
+            ) : (
+              sorted.map(u => (
+                <TableRow
+                  key={u.id}
+                  data-testid={`row-tijdelijk-${u.id}`}
+                  className={!u.active ? "opacity-60" : ""}
+                >
+                  <TableCell className="text-sm font-mono">{(u as any).kadasterId ?? "—"}</TableCell>
+                  <TableCell className="font-medium">{u.fullName}</TableCell>
+                  <TableCell className="text-sm">{u.department || "—"}</TableCell>
+                  <TableCell className="text-sm">{u.functie || "—"}</TableCell>
+                  <TableCell className="text-sm">{formatDateDutch(u.startDate)}</TableCell>
+                  <TableCell className="text-sm">{u.endDate ? formatDateDutch(u.endDate) : "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={u.active ? "default" : "secondary"} className="text-xs">
+                      {u.active ? "Actief" : "Niet actief"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
 export default function RapportenPage() {
   const { data: users, isLoading } = useQuery<UserExt[]>({ queryKey: ["/api/users"] });
   const { data: rapportenPhoto } = useQuery<{ value: string | null }>({
@@ -744,7 +894,7 @@ export default function RapportenPage() {
           </div>
         ) : (
           <Tabs defaultValue="medewerker-info">
-            <TabsList className="mb-6 print:hidden">
+            <TabsList className="mb-6 print:hidden flex-wrap h-auto gap-1">
               <TabsTrigger value="medewerker-info" data-testid="tab-medewerker-info">
                 <Users className="h-4 w-4 mr-2" />
                 Medewerker info
@@ -760,6 +910,10 @@ export default function RapportenPage() {
               <TabsTrigger value="medewerker-status" data-testid="tab-medewerker-status">
                 <ActivitySquare className="h-4 w-4 mr-2" />
                 Medewerker status
+              </TabsTrigger>
+              <TabsTrigger value="tijdelijk" data-testid="tab-tijdelijk">
+                <Clock className="h-4 w-4 mr-2" />
+                Tijdelijk
               </TabsTrigger>
               <TabsTrigger value="gezin" data-testid="tab-gezin">
                 <FamilyIcon className="h-4 w-4 mr-2" />
@@ -777,6 +931,9 @@ export default function RapportenPage() {
             </TabsContent>
             <TabsContent value="medewerker-status">
               <MedewerkerStatusTab users={users || []} />
+            </TabsContent>
+            <TabsContent value="tijdelijk">
+              <TijdelijkeTab users={users || []} />
             </TabsContent>
             <TabsContent value="gezin">
               <GezinTab users={users || []} />
