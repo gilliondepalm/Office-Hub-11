@@ -1019,8 +1019,8 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
     mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
       await apiRequest("PUT", `/api/competencies/${id}`, data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/competencies/functie", compFunctie] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/competencies/functie", compFunctie] });
       queryClient.invalidateQueries({ queryKey: ["/api/competencies"] });
       setEditingCompId(null);
       toast({ title: "Competentie bijgewerkt" });
@@ -1301,7 +1301,7 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
                                 <div key={n} className="flex items-start gap-2 text-xs">
                                   <Badge variant="outline" className="shrink-0 w-6 justify-center text-[10px] mt-0.5">{n}</Badge>
                                   <span className="shrink-0 font-medium text-muted-foreground min-w-[12rem]">{normLabels[n]}</span>
-                                  <span className={normVal ? "text-foreground" : "text-muted-foreground/50 italic"}>{normVal || "—"}</span>
+                                  <span className={`whitespace-pre-wrap ${normVal ? "text-foreground" : "text-muted-foreground/50 italic"}`}>{normVal || "—"}</span>
                                 </div>
                               );
                             })}
