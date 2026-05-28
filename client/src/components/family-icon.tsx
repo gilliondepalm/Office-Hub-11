@@ -9,18 +9,21 @@ export function FamilyIcon({ className }: { className?: string }) {
       strokeLinejoin="round"
       className={className}
     >
-      {/* Left adult */}
-      <circle cx="4.5" cy="4.5" r="2.2" />
-      <path d="M0.8 13a3.7 3.7 0 0 1 7.4 0" />
-      {/* Middle child (smaller) */}
-      <circle cx="12" cy="6.5" r="1.6" />
-      <path d="M9.5 13a2.5 2.5 0 0 1 5 0" />
-      {/* Right adult */}
-      <circle cx="19.5" cy="4.5" r="2.2" />
-      <path d="M15.8 13a3.7 3.7 0 0 1 7.4 0" />
-      {/* Plus sign bottom-right */}
-      <line x1="20.5" y1="17.5" x2="20.5" y2="23.5" />
-      <line x1="17.5" y1="20.5" x2="23.5" y2="20.5" />
+      {/* Left adult (tall) — head + standing body silhouette */}
+      <circle cx="4.5" cy="4" r="2" />
+      <path d="M1 17v-3a3.5 3.5 0 0 1 7 0v3" />
+
+      {/* Right adult (tall) — mirrored */}
+      <circle cx="19.5" cy="4" r="2" />
+      <path d="M16 17v-3a3.5 3.5 0 0 1 7 0v3" />
+
+      {/* Middle child (shorter, smaller head) */}
+      <circle cx="12" cy="7" r="1.5" />
+      <path d="M9.5 17v-2a2.5 2.5 0 0 1 5 0v2" />
+
+      {/* Plus sign — bottom right */}
+      <line x1="20.5" y1="19.5" x2="20.5" y2="23.5" />
+      <line x1="18.5" y1="21.5" x2="22.5" y2="21.5" />
     </svg>
   );
 }
