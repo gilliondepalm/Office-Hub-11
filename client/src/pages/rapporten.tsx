@@ -96,7 +96,7 @@ function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
       case "voornamen":
         return ((a as any).voornamen || a.fullName || "").localeCompare((b as any).voornamen || b.fullName || "", "nl");
       case "kadasterId":
-        return ((a as any).kadasterId || "").localeCompare((b as any).kadasterId || "", "nl");
+        return ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
       default:
         return 0;
     }

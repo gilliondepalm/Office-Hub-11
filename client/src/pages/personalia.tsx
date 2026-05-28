@@ -221,7 +221,7 @@ function EditDialog({
       birthDate: user.birthDate || "",
       phoneExtension: user.phoneExtension || "",
       functie: user.functie || "",
-      kadasterId: (user as any).kadasterId || "",
+      kadasterId: (user as any).kadasterId != null ? String((user as any).kadasterId) : "",
       cedulaNr: (user as any).cedulaNr || "",
       telefoonnr: (user as any).telefoonnr || "",
       mobielnr: (user as any).mobielnr || "",
@@ -237,8 +237,9 @@ function EditDialog({
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof editFormSchema>) => {
       if (data.kadasterId) {
+        const numKadId = Number(data.kadasterId);
         const duplicate = (allUsers ?? []).find(
-          (u) => u.id !== user.id && (u as any).kadasterId === data.kadasterId
+          (u) => u.id !== user.id && (u as any).kadasterId === numKadId
         );
         if (duplicate) {
           throw new Error(`Userid "${data.kadasterId}" is al in gebruik door ${(duplicate as any).voornamen ?? duplicate.username}`);
@@ -261,7 +262,7 @@ function EditDialog({
         birthDate: data.birthDate || null,
         phoneExtension: data.phoneExtension || null,
         functie: (data.functie === "none" || !data.functie) ? null : data.functie,
-        kadasterId: data.kadasterId || null,
+        kadasterId: data.kadasterId ? Number(data.kadasterId) : null,
         cedulaNr: data.cedulaNr || null,
         telefoonnr: data.telefoonnr || null,
         mobielnr: data.mobielnr || null,
@@ -1453,6 +1454,7 @@ export default function PersonaliaPage() {
         birthDate: data.birthDate || null,
         phoneExtension: data.phoneExtension || null,
         functie: (data.functie === "none" || !data.functie) ? null : data.functie,
+        kadasterId: data.kadasterId ? Number(data.kadasterId) : null,
         cedulaNr: data.cedulaNr || null,
         telefoonnr: data.telefoonnr || null,
         mobielnr: data.mobielnr || null,

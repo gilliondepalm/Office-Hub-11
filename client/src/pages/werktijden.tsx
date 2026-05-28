@@ -33,7 +33,7 @@ import type { User } from "@shared/schema";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Werktijd = {
   logid: number;
-  userid: string;
+  userid: number;
   checktime: string;
   checktype: string;
 };
@@ -55,7 +55,7 @@ type EventLog = {
   eventAt: string;
   importId: string | null;
   eventType: string;
-  userid: string | null;
+  userid: number | null;
   checktime: string | null;
   bericht: string;
 };
@@ -147,7 +147,7 @@ function printTable(title: string, headers: string[], rows: (string | number | n
 
 // ── Sessie berekening ─────────────────────────────────────────────────────────
 type Sessie = {
-  userid: string;
+  userid: number;
   datum: string;
   weekdag: string;
   eersteIn: Date | null;
@@ -167,7 +167,8 @@ function buildSessies(records: Werktijd[]): Sessie[] {
   return Object.entries(byUserDay)
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([key, recs]) => {
-      const [userid, datum] = key.split("::");
+      const [useridStr, datum] = key.split("::");
+      const userid = Number(useridStr);
       const sorted  = [...recs].sort((a, b) => parseChecktime(a.checktime).getTime() - parseChecktime(b.checktime).getTime());
       const ins     = sorted.filter(r => r.checktype === "in").map(r => parseChecktime(r.checktime));
       const outs    = sorted.filter(r => r.checktype === "out").map(r => parseChecktime(r.checktime));
@@ -280,7 +281,7 @@ type AfdelingStats = {
 };
 
 type DrempelResultaat = {
-  kadasterId: string;
+  kadasterId: number;
   naam: string;
   teLaatCount: number;
   teVroegUitCount: number;
@@ -934,7 +935,7 @@ export default function WerktijdenPage() {
     } else if (!isFullAdmin) {
       // Regular employees: lock to own dept + own id in analyse
       if (dept) setFilterAnalyseDept(dept);
-      if (kadasterId) setAnalyseUserId(kadasterId);
+      if (kadasterId != null) setAnalyseUserId(String(kadasterId));
     }
   }, [user?.id, user?.role]);
 
@@ -1000,7 +1001,7 @@ export default function WerktijdenPage() {
   const activeUsers = (allUsers as any[]).filter((u: any) => u.active && u.kadasterId);
 
   // Voor medewerkers: automatisch eigen kadasterId selecteren in de Analyse tab
-  const myKadasterId = (user as any)?.kadasterId || "";
+  const myKadasterId = (user as any)?.kadasterId != null ? String((user as any).kadasterId) : "";
   useEffect(() => {
     if (!isManager && myKadasterId) {
       setAnalyseUserId(myKadasterId);
@@ -1019,9 +1020,10 @@ export default function WerktijdenPage() {
     onError: (err: any) => toast({ title: "Fout", description: err.message, variant: "destructive" }),
   });
 
-  const getUserName = (kadasterId: string) => {
-    const u = activeUsers.find((u: any) => u.kadasterId === kadasterId);
-    return u ? ((u as any).fullName || u.username) : kadasterId;
+  const getUserName = (kadasterId: number | string) => {
+    const numId = Number(kadasterId);
+    const u = activeUsers.find((u: any) => u.kadasterId === numId);
+    return u ? ((u as any).fullName || u.username) : String(kadasterId);
   };
 
   const sendWaarschuwingMutation = useMutation({
@@ -1046,7 +1048,7 @@ export default function WerktijdenPage() {
   });
 
   const handmatigMutation = useMutation({
-    mutationFn: async (data: { userid: string; datum: string; tijdstip: string; checktype: string }) => {
+    mutationFn: async (data: { userid: number; datum: string; tijdstip: string; checktype: string }) => {
       const res = await fetch("/api/werktijden", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1236,7 +1238,7 @@ export default function WerktijdenPage() {
 
   const filteredSessies = useMemo(() => {
     const list = sessies.filter(s => {
-      if (filterUserid !== "all" && s.userid !== filterUserid) return false;
+      if (filterUserid !== "all" && String(s.userid) !== filterUserid) return false;
       if (filterDatum && !s.datum.includes(filterDatum)) return false;
       if (filterSessionDept !== "all") {
         const u = activeUsers.find((u: any) => u.kadasterId === s.userid);
@@ -1254,8 +1256,8 @@ export default function WerktijdenPage() {
         if (sesSortCol === "medewerker") {
           const na = activeUsers.find((u: any) => u.kadasterId === a.userid);
           const nb = activeUsers.find((u: any) => u.kadasterId === b.userid);
-          const sa = na ? ((na as any).fullName || na.username) : a.userid;
-          const sb = nb ? ((nb as any).fullName || nb.username) : b.userid;
+          const sa = na ? ((na as any).fullName || na.username) : String(a.userid);
+          const sb = nb ? ((nb as any).fullName || nb.username) : String(b.userid);
           cmp = sa.localeCompare(sb, "nl");
         } else {
           cmp = a.datum.localeCompare(b.datum);
@@ -1278,7 +1280,7 @@ export default function WerktijdenPage() {
 
   const filteredRecords = useMemo(() => {
     const list = records.filter(r => {
-      if (filterUserid !== "all" && r.userid !== filterUserid) return false;
+      if (filterUserid !== "all" && String(r.userid) !== filterUserid) return false;
       if (filterDatum && !dateKey(r.checktime).includes(filterDatum)) return false;
       if (filterRegDept !== "all") {
         const u = activeUsers.find((u: any) => u.kadasterId === r.userid);
@@ -1296,8 +1298,8 @@ export default function WerktijdenPage() {
         if (regSortCol === "medewerker") {
           const na = activeUsers.find((u: any) => u.kadasterId === a.userid);
           const nb = activeUsers.find((u: any) => u.kadasterId === b.userid);
-          const sa = na ? ((na as any).fullName || na.username) : a.userid;
-          const sb = nb ? ((nb as any).fullName || nb.username) : b.userid;
+          const sa = na ? ((na as any).fullName || na.username) : String(a.userid);
+          const sb = nb ? ((nb as any).fullName || nb.username) : String(b.userid);
           cmp = sa.localeCompare(sb, "nl");
         } else {
           cmp = dateKey(a.checktime).localeCompare(dateKey(b.checktime));
@@ -1395,7 +1397,7 @@ export default function WerktijdenPage() {
   const drempelResults = useMemo((): DrempelResultaat[] => {
     if (!records.length || !activeUsers.length) return [];
     return (activeUsers as any[]).flatMap(u => {
-      const kadasterId: string = u.kadasterId;
+      const kadasterId: number = u.kadasterId;
       const userId: number = u.id;
       const userRecs = records.filter(r => {
         if (r.userid !== kadasterId) return false;
@@ -1445,11 +1447,11 @@ export default function WerktijdenPage() {
   // ── Analyse data berekening ──────────────────────────────────────────────────
   const analyseData = useMemo((): DagAnalyse[] | null => {
     if (!analyseUserId) return null;
-    const userObj = activeUsers.find((u: any) => u.kadasterId === analyseUserId);
+    const userObj = activeUsers.find((u: any) => String(u.kadasterId) === analyseUserId);
     const userId  = userObj?.id as number | undefined;
 
     const userRecs = records.filter(r => {
-      if (r.userid !== analyseUserId) return false;
+      if (String(r.userid) !== analyseUserId) return false;
       const dk = dateKey(r.checktime);
       if (analyseFrom && dk < analyseFrom) return false;
       if (analyseTo   && dk > analyseTo)   return false;
@@ -1870,7 +1872,7 @@ export default function WerktijdenPage() {
                   <SelectContent>
                     <SelectItem value="all">Alle medewerkers</SelectItem>
                     {regFilteredUsers.map((u: any) => (
-                      <SelectItem key={u.kadasterId} value={u.kadasterId}>
+                      <SelectItem key={u.kadasterId} value={String(u.kadasterId)}>
                         {u.fullName || u.username} (ID: {u.kadasterId})
                       </SelectItem>
                     ))}
@@ -2094,7 +2096,7 @@ export default function WerktijdenPage() {
                   <SelectContent>
                     <SelectItem value="all">Alle medewerkers</SelectItem>
                     {sessieFilteredUsers.map((u: any) => (
-                      <SelectItem key={u.kadasterId} value={u.kadasterId}>
+                      <SelectItem key={u.kadasterId} value={String(u.kadasterId)}>
                         {u.fullName || u.username} (ID: {u.kadasterId})
                       </SelectItem>
                     ))}
@@ -2400,7 +2402,7 @@ export default function WerktijdenPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {analyseFilteredUsers.map((u: any) => (
-                            <SelectItem key={u.kadasterId} value={u.kadasterId}>
+                            <SelectItem key={u.kadasterId} value={String(u.kadasterId)}>
                               {u.fullName || u.username} (ID: {u.kadasterId})
                             </SelectItem>
                           ))}
@@ -2918,7 +2920,7 @@ export default function WerktijdenPage() {
                             variant="outline"
                             className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                             onClick={() => {
-                              setAnalyseUserId(result.kadasterId);
+                              setAnalyseUserId(String(result.kadasterId));
                               setAnalyseFrom(drempelFrom);
                               setAnalyseTo(drempelTo);
                               setWaarschuwingTekst(composeWaarschuwingVanDrempel(result, drempelFrom, drempelTo));
@@ -2955,7 +2957,7 @@ export default function WerktijdenPage() {
               </div>
               <Button
                 onClick={() => {
-                  setCorrectieKadasterId(user?.kadasterId || "");
+                  setCorrectieKadasterId((user as any)?.kadasterId != null ? String((user as any).kadasterId) : "");
                   setShowCorrectieDialog(true);
                 }}
                 data-testid="button-correctie-aanvragen"
@@ -3149,7 +3151,7 @@ export default function WerktijdenPage() {
             <Button
               disabled={!correctieDatum || !correctieTijdstip || !(user as any)?.kadasterId || correctieMutation.isPending}
               onClick={() => {
-                const kadasId = (user as any)?.kadasterId || "";
+                const kadasId = (user as any)?.kadasterId as number | undefined;
                 if (!kadasId || !correctieDatum || !correctieTijdstip) return;
                 const dt = new Date(`${correctieDatum}T${correctieTijdstip}:00`);
                 correctieMutation.mutate({
@@ -3230,7 +3232,7 @@ export default function WerktijdenPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {activeUsers.map((u: any) => (
-                    <SelectItem key={u.kadasterId} value={u.kadasterId}>
+                    <SelectItem key={u.kadasterId} value={String(u.kadasterId)}>
                       {u.fullName || u.username} (ID: {u.kadasterId})
                     </SelectItem>
                   ))}
@@ -3294,7 +3296,7 @@ export default function WerktijdenPage() {
             </Button>
             <Button
               disabled={!handmatigUserId || !handmatigDatum || !handmatigTijdstip || handmatigMutation.isPending}
-              onClick={() => handmatigMutation.mutate({ userid: handmatigUserId, datum: handmatigDatum, tijdstip: handmatigTijdstip, checktype: handmatigType })}
+              onClick={() => handmatigMutation.mutate({ userid: Number(handmatigUserId), datum: handmatigDatum, tijdstip: handmatigTijdstip, checktype: handmatigType })}
               data-testid="button-handmatig-opslaan"
             >
               <Clock className="h-4 w-4 mr-1.5" />

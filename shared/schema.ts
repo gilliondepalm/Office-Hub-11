@@ -25,7 +25,7 @@ export const users = pgTable("users", {
   vacationDaysSaldoOud: integer("vacation_days_saldo_oud").default(0),
   phoneExtension: text("phone_extension"),
   functie: text("functie"),
-  kadasterId: text("kadaster_id"),
+  kadasterId: integer("kadaster_id"),
   cedulaNr: text("cedula_nr"),
   telefoonnr: text("telefoonnr"),
   mobielnr: text("mobielnr"),
@@ -680,7 +680,7 @@ export type TrendOrNotaris = typeof trendOrNotaris.$inferSelect;
 // ── Werktijden ────────────────────────────────────────────────────────────────
 export const werktijden = pgTable("werktijden", {
   logid: serial("logid").primaryKey(),
-  userid: varchar("userid", { length: 20 }).notNull(),
+  userid: integer("userid").notNull(),
   checktime: timestamp("checktime").notNull(),
   checktype: text("checktype").notNull().default("in"), // 'in' | 'out'
   importId: varchar("import_id").references(() => importLog.id),
@@ -692,7 +692,7 @@ export type Werktijden = typeof werktijden.$inferSelect;
 // ── Overuur aanvragen ─────────────────────────────────────────────────────────
 export const overuurAanvragen = pgTable("overuur_aanvragen", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userid: varchar("userid", { length: 20 }).notNull(),
+  userid: integer("userid").notNull(),
   datum: date("datum").notNull(),
   reden: text("reden"),
   aangevraagdDoor: varchar("aangevraagd_door").references(() => users.id),
@@ -726,7 +726,7 @@ export const prikklokEventLog = pgTable("prikklok_event_log", {
   eventAt: timestamp("event_at").notNull().defaultNow(),
   importId: varchar("import_id").references(() => importLog.id),
   eventType: text("event_type").notNull().default("info"), // info | warning | error
-  userid: varchar("userid", { length: 20 }),
+  userid: integer("userid"),
   checktime: timestamp("checktime"),
   bericht: text("bericht").notNull(),
 });
@@ -753,7 +753,7 @@ export type TrendKartografenHist = typeof trendKartografenHist.$inferSelect;
 export const correctieverzoeken = pgTable("correctieverzoeken", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ingediendDoor: varchar("ingediend_door").references(() => users.id).notNull(),
-  kadasterId: varchar("kadaster_id", { length: 20 }).notNull(),
+  kadasterId: integer("kadaster_id").notNull(),
   datum: date("datum").notNull(),
   checktime: timestamp("checktime").notNull(),
   richting: text("richting").notNull(), // 'IN' | 'OUT'

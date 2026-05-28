@@ -1259,9 +1259,9 @@ function PrikklokOverzichtTab() {
   const { data: allUsers = [] } = useQuery<SafeUser[]>({ queryKey: ["/api/users"] });
 
   const kadasterMap = useMemo(() => {
-    const m: Record<string, SafeUser> = {};
+    const m: Record<number, SafeUser> = {};
     for (const u of allUsers as any[]) {
-      if (u.kadasterId) m[u.kadasterId] = u as SafeUser;
+      if (u.kadasterId != null) m[u.kadasterId as number] = u as SafeUser;
     }
     return m;
   }, [allUsers]);

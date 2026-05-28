@@ -1,0 +1,1 @@
+- [kadasterId integer migration](kadaster-integer-migration.md) — kadasterId/userid are INTEGER in DB; form inputs stay string, convert with Number() before API calls.

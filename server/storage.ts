@@ -66,7 +66,7 @@ export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
-  getNextKadasterId(): Promise<string>;
+  getNextKadasterId(): Promise<number>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User>;
   deleteUser(id: string): Promise<void>;
@@ -289,7 +289,7 @@ export interface IStorage {
   upsertTrendKartografenHistRow(row: InsertTrendKartografenHist): Promise<void>;
   deleteTrendKartografenHistByJaar(jaar: number): Promise<void>;
 
-  getWerktijden(userid?: string): Promise<Werktijden[]>;
+  getWerktijden(userid?: number | string): Promise<Werktijden[]>;
   createWerktijden(record: InsertWerktijden): Promise<Werktijden>;
   bulkCreateWerktijden(records: InsertWerktijden[]): Promise<Werktijden[]>;
   deleteWerktijden(logid: number): Promise<void>;
@@ -341,12 +341,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users);
   }
 
-  async getNextKadasterId(): Promise<string> {
+  async getNextKadasterId(): Promise<number> {
     const result = await db.execute(
-      sql`SELECT COALESCE(MAX(NULLIF(kadaster_id, '')::integer), 0) + 1 AS next_id FROM users`
+      sql`SELECT COALESCE(MAX(kadaster_id), 0) + 1 AS next_id FROM users`
     );
     const rows = result.rows as any[];
-    return String(rows[0]?.next_id ?? 1);
+    return Number(rows[0]?.next_id ?? 1);
   }
 
   async createUser(user: InsertUser): Promise<User> {
@@ -1643,9 +1643,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(trendKartografenHist).where(eq(trendKartografenHist.jaar, jaar));
   }
 
-  async getWerktijden(userid?: string): Promise<Werktijden[]> {
-    if (userid) {
-      return db.select().from(werktijden).where(eq(werktijden.userid, userid)).orderBy(desc(werktijden.checktime));
+  async getWerktijden(userid?: number | string): Promise<Werktijden[]> {
+    if (userid != null && userid !== "") {
+      const numId = Number(userid);
+      return db.select().from(werktijden).where(eq(werktijden.userid, numId)).orderBy(desc(werktijden.checktime));
     }
     return db.select().from(werktijden).orderBy(desc(werktijden.checktime));
   }

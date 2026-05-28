@@ -3625,7 +3625,7 @@ export async function registerRoutes(
       const currentUser = (req as any).user;
       if (!currentUser) return res.status(401).json({ message: "Niet ingelogd" });
       const isManager = isAdminRole(currentUser.role) || currentUser.role === "manager" || currentUser.role === "manager_az";
-      const useridFilter = req.query.userid as string | undefined;
+      const useridFilter = req.query.userid ? Number(req.query.userid) : undefined;
       if (isManager) {
         const records = await storage.getWerktijden(useridFilter);
         res.json(records);
@@ -3769,7 +3769,7 @@ export async function registerRoutes(
       const allUsers = await storage.getUsers();
       const knownUserids = new Set(allUsers.map((u: any) => u.kadasterId).filter(Boolean));
 
-      const eventLogs: { eventType: string; userid?: string; checktime?: Date; bericht: string }[] = [];
+      const eventLogs: { eventType: string; userid?: number; checktime?: Date; bericht: string }[] = [];
       let foutRecords = 0;
       let waarschuwingen = 0;
 
@@ -3784,7 +3784,7 @@ export async function registerRoutes(
       ];
 
       // Stap 1: parseer alle regels, records zonder expliciet type worden later verwerkt
-      type ParsedRec = { userid: string; checktime: Date; checktype: string | null; lineNum: number };
+      type ParsedRec = { userid: number; checktime: Date; checktype: string | null; lineNum: number };
       const parsedRecs: ParsedRec[] = [];
 
       for (let i = dataStartLine; i < lines.length; i++) {
@@ -3799,11 +3799,13 @@ export async function registerRoutes(
           continue;
         }
 
+        const numericUserId = parseInt(rawUserId, 10);
+
         // Tijdstip parsen via parseFlexDate (ondersteunt DD-MM-YYYY, D-M-YYYY, ISO, etc.)
         const checktime = parseFlexDate(rawTime);
         if (!checktime) {
           foutRecords++;
-          eventLogs.push({ eventType: "error", userid: rawUserId, bericht: `Rij ${i + 1}: ongeldig tijdstip "${rawTime}"` });
+          eventLogs.push({ eventType: "error", userid: isNaN(numericUserId) ? undefined : numericUserId, bericht: `Rij ${i + 1}: ongeldig tijdstip "${rawTime}"` });
           continue;
         }
 
@@ -3817,24 +3819,24 @@ export async function registerRoutes(
           else {
             checktype = null; // onbekend type → ook blok-gebaseerd
             waarschuwingen++;
-            eventLogs.push({ eventType: "warning", userid: rawUserId, checktime, bericht: `Rij ${i + 1}: onbekend checktype "${rawType}", wordt blok-gebaseerd bepaald` });
+            eventLogs.push({ eventType: "warning", userid: isNaN(numericUserId) ? undefined : numericUserId, checktime, bericht: `Rij ${i + 1}: onbekend checktype "${rawType}", wordt blok-gebaseerd bepaald` });
           }
         }
 
         // Valideer userid
-        if (!knownUserids.has(rawUserId)) {
+        if (!knownUserids.has(numericUserId)) {
           waarschuwingen++;
-          eventLogs.push({ eventType: "warning", userid: rawUserId, checktime, bericht: `Rij ${i + 1}: userid "${rawUserId}" niet gevonden in systeem` });
+          eventLogs.push({ eventType: "warning", userid: isNaN(numericUserId) ? undefined : numericUserId, checktime, bericht: `Rij ${i + 1}: userid "${rawUserId}" niet gevonden in systeem` });
         }
 
         // Buiten bereik?
         const h = checktime.getHours();
         if (h < 5 || h > 22) {
           waarschuwingen++;
-          eventLogs.push({ eventType: "warning", userid: rawUserId, checktime, bericht: `Rij ${i + 1}: tijdstip ${checktime.toTimeString().slice(0, 5)} valt buiten normaal bereik (05:00–22:00)` });
+          eventLogs.push({ eventType: "warning", userid: isNaN(numericUserId) ? undefined : numericUserId, checktime, bericht: `Rij ${i + 1}: tijdstip ${checktime.toTimeString().slice(0, 5)} valt buiten normaal bereik (05:00–22:00)` });
         }
 
-        parsedRecs.push({ userid: rawUserId, checktime, checktype, lineNum: i + 1 });
+        parsedRecs.push({ userid: isNaN(numericUserId) ? 0 : numericUserId, checktime, checktype, lineNum: i + 1 });
       }
 
       // Stap 2: wijs types toe aan records zonder expliciet type via blok-matching
@@ -3887,7 +3889,7 @@ export async function registerRoutes(
       }
 
       // Stap 3: zet parsedRecs om naar definitieve records (zelfde volgorde als CSV)
-      const records: { userid: string; checktime: Date; checktype: string }[] = parsedRecs.map(r => ({
+      const records: { userid: number; checktime: Date; checktype: string }[] = parsedRecs.map(r => ({
         userid: r.userid,
         checktime: r.checktime,
         checktype: r.checktype ?? "in",
@@ -3895,7 +3897,7 @@ export async function registerRoutes(
 
       // Logregels aanmaken
       for (const r of parsedRecs) {
-        eventLogs.push({ eventType: "info", userid: r.userid, checktime: r.checktime, bericht: `Rij ${r.lineNum}: ${r.userid} ${r.checktype} ${r.checktime.toISOString()}` });
+        eventLogs.push({ eventType: "info", userid: r.userid || undefined, checktime: r.checktime, bericht: `Rij ${r.lineNum}: ${r.userid} ${r.checktype} ${r.checktime.toISOString()}` });
       }
 
       // ── Duplicaten detecteren ───────────────────────────────────────────────
@@ -3905,7 +3907,7 @@ export async function registerRoutes(
         const key = `${r.userid}::${r.checktime.toISOString()}`;
         if (seen.has(key)) {
           waarschuwingen++;
-          eventLogs.push({ eventType: "warning", userid: r.userid, checktime: r.checktime, bericht: `Duplicaat gevonden: ${r.userid} @ ${r.checktime.toISOString()}` });
+          eventLogs.push({ eventType: "warning", userid: r.userid || undefined, checktime: r.checktime, bericht: `Duplicaat gevonden: ${r.userid} @ ${r.checktime.toISOString()}` });
         } else {
           seen.add(key);
           deduped.push(r);
@@ -3924,10 +3926,10 @@ export async function registerRoutes(
         const outs = recs.filter(r => r.checktype === "out").length;
         if (ins === 0 && outs > 0) {
           waarschuwingen++;
-          eventLogs.push({ eventType: "warning", userid: key.split("::")[0], bericht: `${key.split("::")[1]}: uitklokregistraties zonder inklok` });
+          eventLogs.push({ eventType: "warning", userid: Number(key.split("::")[0]) || undefined, bericht: `${key.split("::")[1]}: uitklokregistraties zonder inklok` });
         } else if (ins > 0 && outs === 0) {
           waarschuwingen++;
-          eventLogs.push({ eventType: "warning", userid: key.split("::")[0], bericht: `${key.split("::")[1]}: inklokregistraties zonder uitklok` });
+          eventLogs.push({ eventType: "warning", userid: Number(key.split("::")[0]) || undefined, bericht: `${key.split("::")[1]}: inklokregistraties zonder uitklok` });
         }
       }
 
