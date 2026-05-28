@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { PageHero } from "@/components/page-hero";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -242,68 +243,63 @@ export default function DashboardPage() {
 
   return (
     <div className="overflow-auto h-full">
-      <div className="relative h-52 overflow-hidden">
-        <img
-          src={photoSrc}
-          alt="Dashboard"
-          className="absolute inset-0 w-full h-full object-cover"
-          data-testid="img-dashboard-photo"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[hsl(152,40%,18%/0.9)] via-[hsl(152,35%,22%/0.8)] to-[hsl(152,30%,25%/0.6)]" />
-        <div className="relative z-10 h-full flex items-center px-8">
-          <div className="space-y-2 flex-1 bg-black/30 backdrop-blur-sm rounded-lg px-5 py-3 w-fit">
+      <PageHero
+        imageSrc={photoSrc}
+        imageAlt="dashboard"
+        containerClassName="h-52"
+        title={
+          <>
             <p className="text-[hsl(48,96%,53%)] font-semibold text-sm tracking-wide uppercase drop-shadow-md">{greeting()}</p>
             <h1 className="text-3xl font-bold text-white drop-shadow-md" data-testid="text-dashboard-title">
               {user?.fullName}
             </h1>
-            <p className="text-white/85 text-sm max-w-lg drop-shadow-sm">
-              Welkom bij het Kadaster Dashboard. Hier vindt u een overzicht van uw kantooromgeving.
-            </p>
-          </div>
-          {isAdmin && (
-            <div className="shrink-0 flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handlePhotoChange}
-                data-testid="input-dashboard-photo"
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-2 bg-white/20 text-white border-white/30 backdrop-blur-sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadPhotoMutation.isPending}
-                data-testid="button-change-photo"
-              >
-                <Camera className="h-4 w-4" />
-                {uploadPhotoMutation.isPending ? "Uploaden..." : "Dashboard foto"}
-              </Button>
-              <input
-                ref={loginFileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleLoginPhotoChange}
-                data-testid="input-login-photo"
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-2 bg-white/20 text-white border-white/30 backdrop-blur-sm"
-                onClick={() => loginFileInputRef.current?.click()}
-                disabled={uploadLoginPhotoMutation.isPending}
-                data-testid="button-change-login-photo"
-              >
-                <Camera className="h-4 w-4" />
-                {uploadLoginPhotoMutation.isPending ? "Uploaden..." : "Inlogpagina foto"}
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+          </>
+        }
+        subtitle="Welkom bij het Kadaster Dashboard. Hier vindt u een overzicht van uw kantooromgeving."
+      >
+        {isAdmin && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoChange}
+              data-testid="input-dashboard-photo"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2 bg-white/20 text-white border-white/30 backdrop-blur-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadPhotoMutation.isPending}
+              data-testid="button-change-photo"
+            >
+              <Camera className="h-4 w-4" />
+              {uploadPhotoMutation.isPending ? "Uploaden..." : "Dashboard foto"}
+            </Button>
+            <input
+              ref={loginFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleLoginPhotoChange}
+              data-testid="input-login-photo"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2 bg-white/20 text-white border-white/30 backdrop-blur-sm"
+              onClick={() => loginFileInputRef.current?.click()}
+              disabled={uploadLoginPhotoMutation.isPending}
+              data-testid="button-change-login-photo"
+            >
+              <Camera className="h-4 w-4" />
+              {uploadLoginPhotoMutation.isPending ? "Uploaden..." : "Inlogpagina foto"}
+            </Button>
+          </>
+        )}
+      </PageHero>
 
       <div className="p-6 space-y-6">
         {isAdmin ? (
