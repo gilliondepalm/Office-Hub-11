@@ -26,7 +26,7 @@ import {
   XCircle, Info, Users, Clock, Layers, RefreshCw, Trash2,
   FileUp, Filter, Search, Calendar, BarChart3, TrendingUp,
   TrendingDown, CoffeeIcon, ClockAlert, ShieldAlert, LogOut, Send, Building2, FileDown,
-  ChevronDown, ChevronRight, Plus, LogIn, ClipboardEdit, CheckCheck, Ban, Printer, UserRound,
+  ChevronDown, ChevronUp, ChevronRight, Plus, LogIn, ClipboardEdit, CheckCheck, Ban, Printer, UserRound,
 } from "lucide-react";
 import type { User } from "@shared/schema";
 
@@ -904,6 +904,10 @@ export default function WerktijdenPage() {
   const [drempelTeLaat, setDrempelTeLaat] = useState(3);
   const [drempelTeVroegUit, setDrempelTeVroegUit] = useState(3);
   const [drempelOnvolledig, setDrempelOnvolledig] = useState(2);
+  const [regSortCol, setRegSortCol] = useState<"medewerker" | "datum" | null>(null);
+  const [regSortDir, setRegSortDir] = useState<"asc" | "desc">("asc");
+  const [sesSortCol, setSesSortCol] = useState<"medewerker" | "datum" | null>(null);
+  const [sesSortDir, setSesSortDir] = useState<"asc" | "desc">("asc");
 
   // Correctieverzoek dialog state
   const [showCorrectieDialog, setShowCorrectieDialog] = useState(false);
@@ -1231,7 +1235,7 @@ export default function WerktijdenPage() {
   }, [activeUsers, filterSessionDept]);
 
   const filteredSessies = useMemo(() => {
-    return sessies.filter(s => {
+    const list = sessies.filter(s => {
       if (filterUserid !== "all" && s.userid !== filterUserid) return false;
       if (filterDatum && !s.datum.includes(filterDatum)) return false;
       if (filterSessionDept !== "all") {
@@ -1244,7 +1248,23 @@ export default function WerktijdenPage() {
       }
       return true;
     });
-  }, [sessies, filterUserid, filterDatum, filterSessionDept, activeUsers, managerDept]);
+    if (sesSortCol) {
+      list.sort((a, b) => {
+        let cmp = 0;
+        if (sesSortCol === "medewerker") {
+          const na = activeUsers.find((u: any) => u.kadasterId === a.userid);
+          const nb = activeUsers.find((u: any) => u.kadasterId === b.userid);
+          const sa = na ? ((na as any).fullName || na.username) : a.userid;
+          const sb = nb ? ((nb as any).fullName || nb.username) : b.userid;
+          cmp = sa.localeCompare(sb, "nl");
+        } else {
+          cmp = a.datum.localeCompare(b.datum);
+        }
+        return sesSortDir === "asc" ? cmp : -cmp;
+      });
+    }
+    return list;
+  }, [sessies, filterUserid, filterDatum, filterSessionDept, activeUsers, managerDept, sesSortCol, sesSortDir]);
 
   const analyseFilteredUsers = useMemo(() => {
     if (filterAnalyseDept === "all") return activeUsers;
@@ -1257,7 +1277,7 @@ export default function WerktijdenPage() {
   }, [activeUsers, filterRegDept]);
 
   const filteredRecords = useMemo(() => {
-    return records.filter(r => {
+    const list = records.filter(r => {
       if (filterUserid !== "all" && r.userid !== filterUserid) return false;
       if (filterDatum && !dateKey(r.checktime).includes(filterDatum)) return false;
       if (filterRegDept !== "all") {
@@ -1270,7 +1290,23 @@ export default function WerktijdenPage() {
       }
       return true;
     });
-  }, [records, filterUserid, filterDatum, filterRegDept, activeUsers, managerDept]);
+    if (regSortCol) {
+      list.sort((a, b) => {
+        let cmp = 0;
+        if (regSortCol === "medewerker") {
+          const na = activeUsers.find((u: any) => u.kadasterId === a.userid);
+          const nb = activeUsers.find((u: any) => u.kadasterId === b.userid);
+          const sa = na ? ((na as any).fullName || na.username) : a.userid;
+          const sb = nb ? ((nb as any).fullName || nb.username) : b.userid;
+          cmp = sa.localeCompare(sb, "nl");
+        } else {
+          cmp = dateKey(a.checktime).localeCompare(dateKey(b.checktime));
+        }
+        return regSortDir === "asc" ? cmp : -cmp;
+      });
+    }
+    return list;
+  }, [records, filterUserid, filterDatum, filterRegDept, activeUsers, managerDept, regSortCol, regSortDir]);
 
   const filteredEvents = useMemo(() => {
     if (!logboekSearch) return eventLogs;
@@ -1948,8 +1984,34 @@ export default function WerktijdenPage() {
                     <TableRow>
                       <TableHead className="pl-4">Log ID</TableHead>
                       <TableHead>Userid</TableHead>
-                      <TableHead>Medewerker</TableHead>
-                      <TableHead>Datum</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:text-foreground"
+                        onClick={() => {
+                          if (regSortCol === "medewerker") setRegSortDir(d => d === "asc" ? "desc" : "asc");
+                          else { setRegSortCol("medewerker"); setRegSortDir("asc"); }
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Medewerker
+                          {regSortCol === "medewerker"
+                            ? regSortDir === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5 opacity-30" />}
+                        </span>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:text-foreground"
+                        onClick={() => {
+                          if (regSortCol === "datum") setRegSortDir(d => d === "asc" ? "desc" : "asc");
+                          else { setRegSortCol("datum"); setRegSortDir("asc"); }
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Datum
+                          {regSortCol === "datum"
+                            ? regSortDir === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5 opacity-30" />}
+                        </span>
+                      </TableHead>
                       <TableHead>Tijdstip</TableHead>
                       <TableHead>Type</TableHead>
                       {isManager && <TableHead className="text-right pr-4">Acties</TableHead>}
@@ -2137,9 +2199,35 @@ export default function WerktijdenPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="pl-4">Medewerker</TableHead>
+                      <TableHead
+                        className="pl-4 cursor-pointer select-none hover:text-foreground"
+                        onClick={() => {
+                          if (sesSortCol === "medewerker") setSesSortDir(d => d === "asc" ? "desc" : "asc");
+                          else { setSesSortCol("medewerker"); setSesSortDir("asc"); }
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Medewerker
+                          {sesSortCol === "medewerker"
+                            ? sesSortDir === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5 opacity-30" />}
+                        </span>
+                      </TableHead>
                       <TableHead>ID</TableHead>
-                      <TableHead>Datum</TableHead>
+                      <TableHead
+                        className="cursor-pointer select-none hover:text-foreground"
+                        onClick={() => {
+                          if (sesSortCol === "datum") setSesSortDir(d => d === "asc" ? "desc" : "asc");
+                          else { setSesSortCol("datum"); setSesSortDir("asc"); }
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Datum
+                          {sesSortCol === "datum"
+                            ? sesSortDir === "asc" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5 opacity-30" />}
+                        </span>
+                      </TableHead>
                       <TableHead>Weekdag</TableHead>
                       <TableHead>Eerste inklok</TableHead>
                       <TableHead>Laatste uitklok</TableHead>

@@ -1252,16 +1252,17 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
                           <div className="pl-6 space-y-2">
                             <p className="text-xs font-medium text-muted-foreground">Normering omschrijvingen:</p>
                             {[1, 2, 3, 4, 5].map(n => (
-                              <div key={n} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <div className="flex items-center gap-2 shrink-0 sm:w-64">
+                              <div key={n} className="flex items-start gap-2">
+                                <div className="flex items-center gap-2 shrink-0 w-56">
                                   <Badge variant="outline" className="shrink-0 w-6 justify-center text-[10px]">{n}</Badge>
                                   <span className="text-xs text-muted-foreground">{normLabels[n]}</span>
                                 </div>
-                                <Input
+                                <Textarea
                                   value={(editCompNorms as any)[`norm${n}`]}
                                   onChange={e => setEditCompNorms(prev => ({ ...prev, [`norm${n}`]: e.target.value }))}
                                   placeholder={`Omschrijving voor ${normLabels[n]}`}
-                                  className="text-xs h-8"
+                                  className="text-xs min-h-[60px] resize-y"
+                                  rows={2}
                                   data-testid={`input-edit-norm-${n}`}
                                 />
                               </div>
@@ -1408,16 +1409,17 @@ function BeoordelingSection({ users, currentUser }: { users?: User[]; currentUse
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Normering omschrijvingen (optioneel):</p>
                     {[1, 2, 3, 4, 5].map(n => (
-                      <div key={n} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <div className="flex items-center gap-2 shrink-0 sm:w-64">
+                      <div key={n} className="flex items-start gap-2">
+                        <div className="flex items-center gap-2 shrink-0 w-56">
                           <Badge variant="outline" className="shrink-0 w-6 justify-center text-[10px]">{n}</Badge>
                           <span className="text-xs text-muted-foreground">{normLabels[n]}</span>
                         </div>
-                        <Input
+                        <Textarea
                           value={(newCompNorms as any)[`norm${n}`]}
                           onChange={e => setNewCompNorms(prev => ({ ...prev, [`norm${n}`]: e.target.value }))}
                           placeholder={`Omschrijving voor ${normLabels[n]}`}
-                          className="text-xs h-8"
+                          className="text-xs min-h-[60px] resize-y"
+                          rows={2}
                           data-testid={`input-new-norm-${n}`}
                         />
                       </div>
