@@ -329,6 +329,33 @@ export const jaarplanActies = pgTable("jaarplan_acties", {
 
 export const insertJaarplanActieSchema = createInsertSchema(jaarplanActies).omit({ id: true, createdAt: true });
 
+export const medewerkerJaarplanItems = pgTable("medewerker_jaarplan_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  year: integer("year").notNull(),
+  afspraken: text("afspraken").notNull(),
+  startDatum: date("start_datum"),
+  eindDatum: date("eind_datum"),
+  status: text("status").default("niet gestart"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertMedewerkerJaarplanItemSchema = createInsertSchema(medewerkerJaarplanItems).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const medewerkerJaarplanActies = pgTable("medewerker_jaarplan_acties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jaarplanId: varchar("jaarplan_id").references(() => medewerkerJaarplanItems.id).notNull(),
+  datum: date("datum").notNull(),
+  actie: text("actie").notNull(),
+  status: text("status").default("niet gestart"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMedewerkerJaarplanActieSchema = createInsertSchema(medewerkerJaarplanActies).omit({ id: true, createdAt: true });
+
 export const loginSchema = z.object({
   username: z.string().min(1, "Gebruikersnaam is verplicht"),
   password: z.string().min(1, "Wachtwoord is verplicht"),
@@ -380,6 +407,10 @@ export type InsertJaarplanOnderdeel = z.infer<typeof insertJaarplanOnderdeelSche
 export type JaarplanOnderdeel = typeof jaarplanOnderdelen.$inferSelect;
 export type InsertJaarplanActie = z.infer<typeof insertJaarplanActieSchema>;
 export type JaarplanActie = typeof jaarplanActies.$inferSelect;
+export type InsertMedewerkerJaarplanItem = z.infer<typeof insertMedewerkerJaarplanItemSchema>;
+export type MedewerkerJaarplanItem = typeof medewerkerJaarplanItems.$inferSelect;
+export type InsertMedewerkerJaarplanActie = z.infer<typeof insertMedewerkerJaarplanActieSchema>;
+export type MedewerkerJaarplanActie = typeof medewerkerJaarplanActies.$inferSelect;
 
 export const helpContentTable = pgTable("help_content", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

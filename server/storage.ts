@@ -5,6 +5,7 @@ import {
   users, events, announcements, departments, absences, absenceCancellations, rewards, applications, appAccess, messages,
   aoProcedures, aoInstructions, positionHistory, personalDevelopment, legislationLinks, caoDocuments, siteSettings,
   functioneringReviews, competencies, beoordelingReviews, beoordelingScores, jaarplanItems, jaarplanOnderdelen, jaarplanActies,
+  medewerkerJaarplanItems, medewerkerJaarplanActies,
   werktijden, overuurAanvragen, importLog, prikklokEventLog, correctieverzoeken, familyMembers,
   type FamilyMember, type InsertFamilyMember,
   type Werktijden, type InsertWerktijden,
@@ -35,6 +36,8 @@ import {
   type JaarplanItem, type InsertJaarplanItem,
   type JaarplanOnderdeel, type InsertJaarplanOnderdeel,
   type JaarplanActie, type InsertJaarplanActie,
+  type MedewerkerJaarplanItem, type InsertMedewerkerJaarplanItem,
+  type MedewerkerJaarplanActie, type InsertMedewerkerJaarplanActie,
   type HelpContent, type InsertHelpContent,
   type OfficialHoliday, type InsertOfficialHoliday,
   type Snipperdag, type InsertSnipperdag,
@@ -205,6 +208,19 @@ export interface IStorage {
   createJaarplanActie(actie: InsertJaarplanActie): Promise<JaarplanActie>;
   updateJaarplanActie(id: string, data: Partial<InsertJaarplanActie>): Promise<JaarplanActie>;
   deleteJaarplanActie(id: string): Promise<void>;
+
+  getMedewerkerJaarplanItems(userId: string, year: number): Promise<MedewerkerJaarplanItem[]>;
+  getMedewerkerJaarplanItemsByDept(department: string, year: number): Promise<MedewerkerJaarplanItem[]>;
+  getMedewerkerJaarplanItemsByYear(year: number): Promise<MedewerkerJaarplanItem[]>;
+  getMedewerkerJaarplanItemById(id: string): Promise<MedewerkerJaarplanItem | undefined>;
+  createMedewerkerJaarplanItem(item: InsertMedewerkerJaarplanItem): Promise<MedewerkerJaarplanItem>;
+  updateMedewerkerJaarplanItem(id: string, data: Partial<InsertMedewerkerJaarplanItem>): Promise<MedewerkerJaarplanItem>;
+  deleteMedewerkerJaarplanItem(id: string): Promise<void>;
+  getMedewerkerJaarplanActies(jaarplanId: string): Promise<MedewerkerJaarplanActie[]>;
+  getMedewerkerJaarplanActieById(id: string): Promise<MedewerkerJaarplanActie | undefined>;
+  createMedewerkerJaarplanActie(actie: InsertMedewerkerJaarplanActie): Promise<MedewerkerJaarplanActie>;
+  updateMedewerkerJaarplanActie(id: string, data: Partial<InsertMedewerkerJaarplanActie>): Promise<MedewerkerJaarplanActie>;
+  deleteMedewerkerJaarplanActie(id: string): Promise<void>;
 
   getAllHelpContent(): Promise<HelpContent[]>;
   upsertHelpContent(data: InsertHelpContent): Promise<HelpContent>;
@@ -1237,6 +1253,76 @@ export class DatabaseStorage implements IStorage {
 
   async deleteJaarplanActie(id: string): Promise<void> {
     await db.delete(jaarplanActies).where(eq(jaarplanActies.id, id));
+  }
+
+  async getMedewerkerJaarplanItems(userId: string, year: number): Promise<MedewerkerJaarplanItem[]> {
+    return db.select().from(medewerkerJaarplanItems)
+      .where(and(eq(medewerkerJaarplanItems.userId, userId), eq(medewerkerJaarplanItems.year, year)))
+      .orderBy(medewerkerJaarplanItems.createdAt);
+  }
+
+  async getMedewerkerJaarplanItemsByDept(department: string, year: number): Promise<MedewerkerJaarplanItem[]> {
+    const deptUsers = await db.select({ id: users.id }).from(users).where(eq(users.department, department));
+    if (deptUsers.length === 0) return [];
+    const results: MedewerkerJaarplanItem[] = [];
+    for (const u of deptUsers) {
+      const items = await db.select().from(medewerkerJaarplanItems)
+        .where(and(eq(medewerkerJaarplanItems.userId, u.id), eq(medewerkerJaarplanItems.year, year)))
+        .orderBy(medewerkerJaarplanItems.createdAt);
+      results.push(...items);
+    }
+    return results;
+  }
+
+  async getMedewerkerJaarplanItemsByYear(year: number): Promise<MedewerkerJaarplanItem[]> {
+    return db.select().from(medewerkerJaarplanItems)
+      .where(eq(medewerkerJaarplanItems.year, year))
+      .orderBy(medewerkerJaarplanItems.userId, medewerkerJaarplanItems.createdAt);
+  }
+
+  async getMedewerkerJaarplanItemById(id: string): Promise<MedewerkerJaarplanItem | undefined> {
+    const [item] = await db.select().from(medewerkerJaarplanItems).where(eq(medewerkerJaarplanItems.id, id));
+    return item;
+  }
+
+  async createMedewerkerJaarplanItem(item: InsertMedewerkerJaarplanItem): Promise<MedewerkerJaarplanItem> {
+    const [created] = await db.insert(medewerkerJaarplanItems).values(item).returning();
+    return created;
+  }
+
+  async updateMedewerkerJaarplanItem(id: string, data: Partial<InsertMedewerkerJaarplanItem>): Promise<MedewerkerJaarplanItem> {
+    const [updated] = await db.update(medewerkerJaarplanItems).set({ ...data, updatedAt: new Date() }).where(eq(medewerkerJaarplanItems.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMedewerkerJaarplanItem(id: string): Promise<void> {
+    await db.delete(medewerkerJaarplanActies).where(eq(medewerkerJaarplanActies.jaarplanId, id));
+    await db.delete(medewerkerJaarplanItems).where(eq(medewerkerJaarplanItems.id, id));
+  }
+
+  async getMedewerkerJaarplanActies(jaarplanId: string): Promise<MedewerkerJaarplanActie[]> {
+    return db.select().from(medewerkerJaarplanActies)
+      .where(eq(medewerkerJaarplanActies.jaarplanId, jaarplanId))
+      .orderBy(medewerkerJaarplanActies.datum);
+  }
+
+  async getMedewerkerJaarplanActieById(id: string): Promise<MedewerkerJaarplanActie | undefined> {
+    const [actie] = await db.select().from(medewerkerJaarplanActies).where(eq(medewerkerJaarplanActies.id, id));
+    return actie;
+  }
+
+  async createMedewerkerJaarplanActie(actie: InsertMedewerkerJaarplanActie): Promise<MedewerkerJaarplanActie> {
+    const [created] = await db.insert(medewerkerJaarplanActies).values(actie).returning();
+    return created;
+  }
+
+  async updateMedewerkerJaarplanActie(id: string, data: Partial<InsertMedewerkerJaarplanActie>): Promise<MedewerkerJaarplanActie> {
+    const [updated] = await db.update(medewerkerJaarplanActies).set(data).where(eq(medewerkerJaarplanActies.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMedewerkerJaarplanActie(id: string): Promise<void> {
+    await db.delete(medewerkerJaarplanActies).where(eq(medewerkerJaarplanActies.id, id));
   }
 
   async getAllHelpContent(): Promise<HelpContent[]> {

@@ -20,6 +20,7 @@ import {
   insertFunctioneringReviewSchema,
   insertCompetencySchema, insertBeoordelingReviewSchema, insertBeoordelingScoreSchema,
   insertJaarplanItemSchema, insertJaarplanOnderdeelSchema, insertJaarplanActieSchema,
+  insertMedewerkerJaarplanItemSchema, insertMedewerkerJaarplanActieSchema,
   insertHelpContentSchema,
   insertYearlyAwardSchema,
   insertKartografieProductieSchema,
@@ -2911,6 +2912,155 @@ export async function registerRoutes(
     } catch (err: any) {
       res.status(400).json({ message: err.message || "Validatiefout" });
     }
+  });
+
+  const canEditMedewerkerJaarplan = (user: any, targetUserId: string): boolean => {
+    if (isAdminRole(user.role) || user.role === "manager_az") return true;
+    if (user.role === "manager") return true;
+    return user.id === targetUserId;
+  };
+
+  const getMedewerkerJaarplanOwner = async (itemId: string) => {
+    const item = await storage.getMedewerkerJaarplanItemById(itemId);
+    return item;
+  };
+
+  app.get("/api/medewerker-jaarplan", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+    const requestedUserId = req.query.userId as string | undefined;
+
+    if (isAdminRole(user.role) || user.role === "manager_az") {
+      if (requestedUserId) {
+        const items = await storage.getMedewerkerJaarplanItems(requestedUserId, year);
+        return res.json(items);
+      }
+      const items = await storage.getMedewerkerJaarplanItemsByYear(year);
+      return res.json(items);
+    }
+
+    if (user.role === "manager") {
+      if (requestedUserId) {
+        const targetUser = await storage.getUserById(requestedUserId);
+        if (!targetUser || targetUser.department !== user.department) {
+          return res.status(403).json({ message: "Geen toegang tot deze medewerker" });
+        }
+        const items = await storage.getMedewerkerJaarplanItems(requestedUserId, year);
+        return res.json(items);
+      }
+      const items = await storage.getMedewerkerJaarplanItemsByDept(user.department || "", year);
+      return res.json(items);
+    }
+
+    const items = await storage.getMedewerkerJaarplanItems(user.id, year);
+    res.json(items);
+  });
+
+  app.post("/api/medewerker-jaarplan", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const { editId, userId: targetUserId, ...rest } = req.body;
+    const ownerId = targetUserId || user.id;
+
+    if (!canEditMedewerkerJaarplan(user, ownerId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+
+    if (user.role === "manager" && ownerId !== user.id) {
+      const targetUser = await storage.getUserById(ownerId);
+      if (!targetUser || targetUser.department !== user.department) {
+        return res.status(403).json({ message: "Geen toegang tot deze medewerker" });
+      }
+    }
+
+    try {
+      const parsed = insertMedewerkerJaarplanItemSchema.parse({ ...rest, userId: ownerId, createdBy: user.id });
+      if (editId) {
+        const updated = await storage.updateMedewerkerJaarplanItem(editId, parsed);
+        return res.json(updated);
+      }
+      const item = await storage.createMedewerkerJaarplanItem(parsed);
+      res.json(item);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Validatiefout" });
+    }
+  });
+
+  app.put("/api/medewerker-jaarplan/:id", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const item = await getMedewerkerJaarplanOwner(req.params.id);
+    if (!item) return res.status(404).json({ message: "Niet gevonden" });
+    if (!canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    try {
+      const parsed = insertMedewerkerJaarplanItemSchema.partial().parse(req.body);
+      const updated = await storage.updateMedewerkerJaarplanItem(req.params.id, parsed);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Validatiefout" });
+    }
+  });
+
+  app.delete("/api/medewerker-jaarplan/:id", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const item = await getMedewerkerJaarplanOwner(req.params.id);
+    if (!item) return res.status(404).json({ message: "Niet gevonden" });
+    if (!canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    await storage.deleteMedewerkerJaarplanItem(req.params.id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/medewerker-jaarplan/:id/acties", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const item = await getMedewerkerJaarplanOwner(req.params.id);
+    if (!item) return res.status(404).json({ message: "Niet gevonden" });
+    if (!canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    const acties = await storage.getMedewerkerJaarplanActies(req.params.id);
+    res.json(acties);
+  });
+
+  app.post("/api/medewerker-jaarplan/:id/acties", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const item = await getMedewerkerJaarplanOwner(req.params.id);
+    if (!item) return res.status(404).json({ message: "Niet gevonden" });
+    if (!canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    try {
+      const parsed = insertMedewerkerJaarplanActieSchema.parse({ ...req.body, jaarplanId: req.params.id, createdBy: user.id });
+      const actie = await storage.createMedewerkerJaarplanActie(parsed);
+      res.json(actie);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Validatiefout" });
+    }
+  });
+
+  app.patch("/api/medewerker-jaarplan/acties/:actieId", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const actie = await storage.getMedewerkerJaarplanActieById(req.params.actieId);
+    if (!actie) return res.status(404).json({ message: "Niet gevonden" });
+    const item = await getMedewerkerJaarplanOwner(actie.jaarplanId);
+    if (!item || !canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    const updated = await storage.updateMedewerkerJaarplanActie(req.params.actieId, req.body);
+    res.json(updated);
+  });
+
+  app.delete("/api/medewerker-jaarplan/acties/:actieId", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const actie = await storage.getMedewerkerJaarplanActieById(req.params.actieId);
+    if (!actie) return res.status(404).json({ message: "Niet gevonden" });
+    const item = await getMedewerkerJaarplanOwner(actie.jaarplanId);
+    if (!item || !canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    await storage.deleteMedewerkerJaarplanActie(req.params.actieId);
+    res.json({ success: true });
   });
 
   app.get("/api/help-content", requireAuth, async (_req, res) => {

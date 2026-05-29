@@ -25,7 +25,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { Reward, User, FunctioneringReview, Competency, BeoordelingReview, BeoordelingScore, JaarplanItem, JaarplanActie, JaarplanOnderdeel, YearlyAward } from "@shared/schema";
+import type { Reward, User, FunctioneringReview, Competency, BeoordelingReview, BeoordelingScore, JaarplanItem, JaarplanActie, JaarplanOnderdeel, YearlyAward, MedewerkerJaarplanItem, MedewerkerJaarplanActie } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
 import { isAdminRole } from "@shared/schema";
 import { formatDate } from "@/lib/dateUtils";
@@ -2426,6 +2426,361 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
   );
 }
 
+function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange }: {
+  actie: MedewerkerJaarplanActie;
+  canEdit: boolean;
+  onDelete: () => void;
+  onStatusChange: (status: string) => void;
+}) {
+  const statusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+  return (
+    <div className="flex items-start gap-2 text-xs py-1.5">
+      <span className="text-muted-foreground whitespace-nowrap font-medium min-w-[80px]">{formatDate(actie.datum)}</span>
+      <p className="flex-1 whitespace-pre-wrap">{actie.actie}</p>
+      {canEdit ? (
+        <Select value={actie.status ?? "niet gestart"} onValueChange={onStatusChange}>
+          <SelectTrigger className={`h-5 w-auto text-[10px] px-1.5 py-0 border-0 ${statusOpt.color}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Badge variant="outline" className={`text-[9px] ${statusOpt.color}`}>{statusOpt.label}</Badge>
+      )}
+      {canEdit && (
+        <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0" onClick={onDelete}>
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
+  item: MedewerkerJaarplanItem;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState(false);
+  const [showActieForm, setShowActieForm] = useState(false);
+  const [actieText, setActieText] = useState("");
+  const [actieDatum, setActieDatum] = useState(new Date().toISOString().split("T")[0]);
+
+  const { data: acties = [] } = useQuery<MedewerkerJaarplanActie[]>({
+    queryKey: ["/api/medewerker-jaarplan", item.id, "acties"],
+    queryFn: async () => {
+      const res = await fetch(`/api/medewerker-jaarplan/${item.id}/acties`, { credentials: "include" });
+      if (!res.ok) throw new Error("Ophalen mislukt");
+      return res.json();
+    },
+    enabled: expanded,
+  });
+
+  const addActieMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/medewerker-jaarplan/${item.id}/acties`, { datum: actieDatum, actie: actieText }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan", item.id, "acties"] });
+      setActieText(""); setShowActieForm(false);
+    },
+    onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+  });
+
+  const deleteActieMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/medewerker-jaarplan/acties/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan", item.id, "acties"] }),
+  });
+
+  const statusActieMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/medewerker-jaarplan/acties/${id}`, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan", item.id, "acties"] }),
+  });
+
+  const statusOpt = statusOptions.find(s => s.value === (item.status ?? "niet gestart")) || statusOptions[0];
+  const afgerond = acties.filter(a => a.status === "afgerond").length;
+  const progress = acties.length > 0 ? Math.round((afgerond / acties.length) * 100) : 0;
+
+  return (
+    <div className="border rounded-lg p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium whitespace-pre-wrap">{item.afspraken}</p>
+          {(item.startDatum || item.eindDatum) && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {item.startDatum && formatDate(item.startDatum)}
+              {item.startDatum && item.eindDatum && " – "}
+              {item.eindDatum && formatDate(item.eindDatum)}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Badge variant="outline" className={`text-[10px] ${statusOpt.color}`}>{statusOpt.label}</Badge>
+          {canEdit && (
+            <>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onEdit}>
+                <Pencil className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive hover:text-destructive" onClick={onDelete}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {acties.length > 0 && (
+        <div className="mt-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+            <div className="flex-1 bg-muted rounded-full h-1.5">
+              <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <span>{progress}%</span>
+          </div>
+        </div>
+      )}
+
+      <Button variant="ghost" size="sm" className="h-6 text-xs mt-1 px-2 -ml-2 text-muted-foreground" onClick={() => setExpanded(e => !e)}>
+        <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        Activiteiten {acties.length > 0 && `(${acties.length})`}
+      </Button>
+
+      {expanded && (
+        <div className="mt-1 pl-1 border-l-2 border-muted ml-1 space-y-0.5">
+          {acties.map(a => (
+            <MedewerkerActieRow
+              key={a.id}
+              actie={a}
+              canEdit={canEdit}
+              onDelete={() => deleteActieMutation.mutate(a.id)}
+              onStatusChange={(status) => statusActieMutation.mutate({ id: a.id, status })}
+            />
+          ))}
+          {acties.length === 0 && <p className="text-xs text-muted-foreground py-1">Nog geen activiteiten</p>}
+          {canEdit && !showActieForm && (
+            <Button variant="ghost" size="sm" className="h-6 text-xs px-1 mt-1" onClick={() => setShowActieForm(true)}>
+              <Plus className="h-3 w-3 mr-1" /> Activiteit toevoegen
+            </Button>
+          )}
+          {canEdit && showActieForm && (
+            <div className="flex gap-2 mt-2 items-end">
+              <Input type="date" value={actieDatum} onChange={e => setActieDatum(e.target.value)} className="h-7 text-xs w-36" />
+              <Input value={actieText} onChange={e => setActieText(e.target.value)} placeholder="Beschrijving..." className="h-7 text-xs flex-1" />
+              <Button size="sm" className="h-7 text-xs" onClick={() => { if (actieText.trim()) addActieMutation.mutate(); }} disabled={addActieMutation.isPending}>
+                <Save className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setShowActieForm(false); setActieText(""); }}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MedewerkerJaarplanSection({ currentUser, allUsers }: { currentUser?: User | null; allUsers?: User[] }) {
+  const { toast } = useToast();
+  const isAdmin = isAdminRole(currentUser?.role) || currentUser?.role === "manager_az";
+  const isManager = currentUser?.role === "manager";
+  const canManage = isAdmin || isManager;
+
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedUserId, setSelectedUserId] = useState<string>(currentUser?.id || "");
+  const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<MedewerkerJaarplanItem | null>(null);
+  const [formData, setFormData] = useState({ afspraken: "", startDatum: "", eindDatum: "", status: "niet gestart" });
+
+  const selectableUsers = isAdmin
+    ? (allUsers || []).filter(u => u.role !== "directeur" || isAdmin)
+    : isManager
+      ? (allUsers || []).filter(u => u.department === currentUser?.department)
+      : [];
+
+  const displayUserId = isAdmin || isManager ? selectedUserId : (currentUser?.id || "");
+
+  const selectedUserName = (() => {
+    if (!displayUserId) return "";
+    const u = (allUsers || []).find(x => x.id === displayUserId);
+    return u ? `${u.firstName} ${u.lastName}` : "";
+  })();
+
+  const { data: items = [], isLoading } = useQuery<MedewerkerJaarplanItem[]>({
+    queryKey: ["/api/medewerker-jaarplan", selectedYear, displayUserId],
+    queryFn: async () => {
+      let url = `/api/medewerker-jaarplan?year=${selectedYear}`;
+      if (displayUserId) url += `&userId=${encodeURIComponent(displayUserId)}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Ophalen mislukt");
+      return res.json();
+    },
+    enabled: !!currentUser,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      await apiRequest("POST", "/api/medewerker-jaarplan", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan"] });
+      toast({ title: "Jaarplan opgeslagen" });
+      handleCloseForm();
+    },
+    onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/medewerker-jaarplan/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan"] });
+      toast({ title: "Plan verwijderd" });
+    },
+  });
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditingItem(null);
+    setFormData({ afspraken: "", startDatum: "", eindDatum: "", status: "niet gestart" });
+  };
+
+  const handleEditItem = (item: MedewerkerJaarplanItem) => {
+    setEditingItem(item);
+    setFormData({ afspraken: item.afspraken, startDatum: item.startDatum || "", eindDatum: item.eindDatum || "", status: item.status || "niet gestart" });
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    if (!formData.afspraken.trim()) {
+      toast({ title: "Vul de afspraken in", variant: "destructive" });
+      return;
+    }
+    saveMutation.mutate({
+      userId: displayUserId || currentUser?.id,
+      year: selectedYear,
+      ...formData,
+      startDatum: formData.startDatum || null,
+      eindDatum: formData.eindDatum || null,
+      editId: editingItem?.id,
+    });
+  };
+
+  const canEditForUser = (item: MedewerkerJaarplanItem) => {
+    if (isAdmin) return true;
+    if (isManager) return true;
+    return item.userId === currentUser?.id;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between print:hidden flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => setSelectedYear(y => y - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-lg font-semibold min-w-[60px] text-center">{selectedYear}</span>
+          <Button variant="outline" size="icon" onClick={() => setSelectedYear(y => y + 1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {(isAdmin || isManager) && selectableUsers.length > 0 && (
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger className="w-52 h-8 text-sm">
+                <SelectValue placeholder="Kies medewerker..." />
+              </SelectTrigger>
+              <SelectContent>
+                {selectableUsers.map(u => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.firstName} {u.lastName}
+                    {isAdmin && u.department ? ` (${u.department})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {(canManage || (!isAdmin && !isManager)) && (
+            <Button size="sm" onClick={() => { handleCloseForm(); setShowForm(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Nieuw plan
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {showForm && (
+        <Card className="border-primary/30">
+          <CardContent className="pt-4 space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Afspraken / doelstelling</label>
+              <Textarea
+                value={formData.afspraken}
+                onChange={e => setFormData(p => ({ ...p, afspraken: e.target.value }))}
+                placeholder="Beschrijf de afspraken of doelstelling..."
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Startdatum</label>
+                <Input type="date" value={formData.startDatum} onChange={e => setFormData(p => ({ ...p, startDatum: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Einddatum</label>
+                <Input type="date" value={formData.eindDatum} onChange={e => setFormData(p => ({ ...p, eindDatum: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Status</label>
+              <Select value={formData.status} onValueChange={v => setFormData(p => ({ ...p, status: v }))}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={handleCloseForm}>Annuleren</Button>
+              <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+                <Save className="h-4 w-4 mr-1" /> Opslaan
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-2"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          <p className="text-sm">
+            {displayUserId && selectedUserName
+              ? `Geen jaarplan voor ${selectedUserName} in ${selectedYear}`
+              : `Geen persoonlijk jaarplan voor ${selectedYear}`}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map(item => (
+            <MedewerkerJaarplanItemCard
+              key={item.id}
+              item={item}
+              canEdit={canEditForUser(item)}
+              onEdit={() => handleEditItem(item)}
+              onDelete={() => deleteMutation.mutate(item.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
   const { toast } = useToast();
   const isAdmin = isAdminRole(currentUser?.role) || currentUser?.role === "manager_az";
@@ -2892,6 +3247,18 @@ export default function BeloningenPage() {
           Jaarplan
         </button>
         <button
+          onClick={() => setActiveTab("medewerker-jaarplan")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "medewerker-jaarplan"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          data-testid="tab-medewerker-jaarplan"
+        >
+          <FileText className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+          Jaarplan medewerker
+        </button>
+        <button
           onClick={() => setActiveTab("beloningsysteem")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "beloningsysteem"
@@ -2915,6 +3282,10 @@ export default function BeloningenPage() {
 
       {activeTab === "jaarplan" && (
         <JaarplanSection currentUser={user} />
+      )}
+
+      {activeTab === "medewerker-jaarplan" && (
+        <MedewerkerJaarplanSection currentUser={user} allUsers={users} />
       )}
 
       {activeTab === "beloningsysteem" && (
