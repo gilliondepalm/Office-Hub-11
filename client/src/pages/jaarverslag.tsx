@@ -197,7 +197,7 @@ function RelativeTrend({
 
 export default function JaarverslagPage() {
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
+  const [year, setYear] = useState(currentYear - 1);
   const { user } = useAuth();
 
   const isManager =
@@ -225,14 +225,25 @@ export default function JaarverslagPage() {
     const countGender = (list: User[], g: string) =>
       list.filter((u) => (u as any).gender === g).length;
 
-    const ageGroups: Record<AgeGroupKey, { man: number; vrouw: number }> = {
+    const emptyAgeGroups = (): Record<AgeGroupKey, { man: number; vrouw: number }> => ({
       "0–24": { man: 0, vrouw: 0 },
       "25–34": { man: 0, vrouw: 0 },
       "35–44": { man: 0, vrouw: 0 },
       "45–54": { man: 0, vrouw: 0 },
       "55+": { man: 0, vrouw: 0 },
-    };
+    });
 
+    const ageGroupsJan = emptyAgeGroups();
+    for (const u of beginUsers) {
+      const age = getAgeAtDate(u.birthDate, jan1);
+      if (age === null) continue;
+      const grp = getAgeGroup(age);
+      const g = (u as any).gender as string | undefined;
+      if (g === "man") ageGroupsJan[grp].man++;
+      else if (g === "vrouw") ageGroupsJan[grp].vrouw++;
+    }
+
+    const ageGroups = emptyAgeGroups();
     for (const u of eindUsers) {
       const age = getAgeAtDate(u.birthDate, dec31);
       if (age === null) continue;
@@ -261,6 +272,7 @@ export default function JaarverslagPage() {
       beginVrouw: countGender(beginUsers, "vrouw"),
       eindMan: countGender(eindUsers, "man"),
       eindVrouw: countGender(eindUsers, "vrouw"),
+      ageGroupsJan,
       ageGroups,
       sick: sickThis,
       sickPrev,
@@ -269,10 +281,18 @@ export default function JaarverslagPage() {
 
   const years = Array.from({ length: Math.max(currentYear - 2019, 1) }, (_, i) => currentYear - i);
 
-  const ageGroupTotals = AGE_GROUPS.reduce(
+  const ageGroupTotalsDec = AGE_GROUPS.reduce(
     (acc, g) => ({
       man: acc.man + (data?.ageGroups[g]?.man ?? 0),
       vrouw: acc.vrouw + (data?.ageGroups[g]?.vrouw ?? 0),
+    }),
+    { man: 0, vrouw: 0 },
+  );
+
+  const ageGroupTotalsJan = AGE_GROUPS.reduce(
+    (acc, g) => ({
+      man: acc.man + (data?.ageGroupsJan[g]?.man ?? 0),
+      vrouw: acc.vrouw + (data?.ageGroupsJan[g]?.vrouw ?? 0),
     }),
     { man: 0, vrouw: 0 },
   );
@@ -350,44 +370,87 @@ export default function JaarverslagPage() {
                   />
                 </div>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Leeftijdsgroepen per 31 december {year} — man / vrouw
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="pl-4">Leeftijdsgroep</TableHead>
-                          <TableHead className="text-center">Man</TableHead>
-                          <TableHead className="text-center">Vrouw</TableHead>
-                          <TableHead className="text-center pr-4">Totaal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {AGE_GROUPS.map((grp) => {
-                          const g = data?.ageGroups[grp] ?? { man: 0, vrouw: 0 };
-                          return (
-                            <TableRow key={grp}>
-                              <TableCell className="pl-4 font-medium">{grp} jaar</TableCell>
-                              <TableCell className="text-center">{g.man}</TableCell>
-                              <TableCell className="text-center">{g.vrouw}</TableCell>
-                              <TableCell className="text-center font-semibold pr-4">{g.man + g.vrouw}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                        <TableRow className="bg-muted/30 font-semibold border-t-2">
-                          <TableCell className="pl-4">Totaal</TableCell>
-                          <TableCell className="text-center">{ageGroupTotals.man}</TableCell>
-                          <TableCell className="text-center">{ageGroupTotals.vrouw}</TableCell>
-                          <TableCell className="text-center pr-4">{data?.eindJaar ?? 0}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Leeftijdsgroepen per 1 januari */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Leeftijdsgroepen per 1 januari {year}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="pl-4">Leeftijdsgroep</TableHead>
+                            <TableHead className="text-center">Man</TableHead>
+                            <TableHead className="text-center">Vrouw</TableHead>
+                            <TableHead className="text-center pr-4">Totaal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {AGE_GROUPS.map((grp) => {
+                            const g = data?.ageGroupsJan[grp] ?? { man: 0, vrouw: 0 };
+                            return (
+                              <TableRow key={grp}>
+                                <TableCell className="pl-4 font-medium">{grp} jaar</TableCell>
+                                <TableCell className="text-center">{g.man}</TableCell>
+                                <TableCell className="text-center">{g.vrouw}</TableCell>
+                                <TableCell className="text-center font-semibold pr-4">{g.man + g.vrouw}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          <TableRow className="bg-muted/30 font-semibold border-t-2">
+                            <TableCell className="pl-4">Totaal</TableCell>
+                            <TableCell className="text-center">{ageGroupTotalsJan.man}</TableCell>
+                            <TableCell className="text-center">{ageGroupTotalsJan.vrouw}</TableCell>
+                            <TableCell className="text-center pr-4">{data?.beginJaar ?? 0}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+
+                  {/* Leeftijdsgroepen per 31 december */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Leeftijdsgroepen per 31 december {year}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="pl-4">Leeftijdsgroep</TableHead>
+                            <TableHead className="text-center">Man</TableHead>
+                            <TableHead className="text-center">Vrouw</TableHead>
+                            <TableHead className="text-center pr-4">Totaal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {AGE_GROUPS.map((grp) => {
+                            const g = data?.ageGroups[grp] ?? { man: 0, vrouw: 0 };
+                            return (
+                              <TableRow key={grp}>
+                                <TableCell className="pl-4 font-medium">{grp} jaar</TableCell>
+                                <TableCell className="text-center">{g.man}</TableCell>
+                                <TableCell className="text-center">{g.vrouw}</TableCell>
+                                <TableCell className="text-center font-semibold pr-4">{g.man + g.vrouw}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          <TableRow className="bg-muted/30 font-semibold border-t-2">
+                            <TableCell className="pl-4">Totaal</TableCell>
+                            <TableCell className="text-center">{ageGroupTotalsDec.man}</TableCell>
+                            <TableCell className="text-center">{ageGroupTotalsDec.vrouw}</TableCell>
+                            <TableCell className="text-center pr-4">{data?.eindJaar ?? 0}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
               </>
             )}
           </TabsContent>
