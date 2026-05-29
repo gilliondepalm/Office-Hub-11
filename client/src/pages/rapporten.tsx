@@ -105,13 +105,20 @@ type VerjaardagenSortField = "kadasterId" | "naam" | "geboortedatum" | "leeftijd
 function VerjaardagenTab({ users }: { users: UserExt[] }) {
   const { field: sortField, dir: sortDir, handleSort } = useSortState<VerjaardagenSortField>("geboortedatum");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "vast" | "tijdelijk">("all");
 
   const today = new Date();
   const todayMonth = today.getMonth() + 1;
   const todayDay = today.getDate();
 
-  const withBirthday = users.filter(u => u.active && u.birthDate);
-  const allSorted = [...users.filter(u => u.active)].sort((a, b) =>
+  const typeFiltered = users.filter(u => {
+    if (typeFilter === "vast") return u.role !== "tijdelijk";
+    if (typeFilter === "tijdelijk") return u.role === "tijdelijk";
+    return true;
+  });
+
+  const withBirthday = typeFiltered.filter(u => u.active && u.birthDate);
+  const allSorted = [...typeFiltered.filter(u => u.active)].sort((a, b) =>
     (a.fullName || "").localeCompare(b.fullName || "", "nl")
   );
 
@@ -153,13 +160,23 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
           Verjaardagen van actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <UserSearch className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="w-52" data-testid="select-verjaardagen-person">
-              <SelectValue placeholder="Alle medewerkers" />
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId("all"); }}>
+            <SelectTrigger className="w-48" data-testid="select-verjaardagen-type">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle medewerkers</SelectItem>
+              <SelectItem value="vast">Vaste medewerkers</SelectItem>
+              <SelectItem value="tijdelijk">Tijdelijke medewerkers</SelectItem>
+            </SelectContent>
+          </Select>
+          <UserSearch className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger className="w-48" data-testid="select-verjaardagen-person">
+              <SelectValue placeholder="Alle personen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle personen</SelectItem>
               {allSorted.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
@@ -215,9 +232,16 @@ type JubileumSortField = "naam" | "afdeling" | "startDate" | "dienstjaren";
 function JubileaTab({ users }: { users: UserExt[] }) {
   const { field: sortField, dir: sortDir, handleSort } = useSortState<JubileumSortField>("dienstjaren", "desc");
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "vast" | "tijdelijk">("all");
 
-  const withStart = users.filter(u => u.active && u.startDate);
-  const allSorted = [...users.filter(u => u.active)].sort((a, b) =>
+  const typeFiltered = users.filter(u => {
+    if (typeFilter === "vast") return u.role !== "tijdelijk";
+    if (typeFilter === "tijdelijk") return u.role === "tijdelijk";
+    return true;
+  });
+
+  const withStart = typeFiltered.filter(u => u.active && u.startDate);
+  const allSorted = [...typeFiltered.filter(u => u.active)].sort((a, b) =>
     (a.fullName || "").localeCompare(b.fullName || "", "nl")
   );
 
@@ -256,13 +280,23 @@ function JubileaTab({ users }: { users: UserExt[] }) {
           Dienstjaren van actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <UserSearch className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="w-52" data-testid="select-jubilea-person">
-              <SelectValue placeholder="Alle medewerkers" />
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId("all"); }}>
+            <SelectTrigger className="w-48" data-testid="select-jubilea-type">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle medewerkers</SelectItem>
+              <SelectItem value="vast">Vaste medewerkers</SelectItem>
+              <SelectItem value="tijdelijk">Tijdelijke medewerkers</SelectItem>
+            </SelectContent>
+          </Select>
+          <UserSearch className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger className="w-48" data-testid="select-jubilea-person">
+              <SelectValue placeholder="Alle personen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle personen</SelectItem>
               {allSorted.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
@@ -448,8 +482,15 @@ function StatusRapport({
 
 function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "vast" | "tijdelijk">("all");
 
-  const allSorted = [...users].sort((a, b) =>
+  const typeFiltered = users.filter(u => {
+    if (typeFilter === "vast") return u.role !== "tijdelijk";
+    if (typeFilter === "tijdelijk") return u.role === "tijdelijk";
+    return true;
+  });
+
+  const allSorted = [...typeFiltered].sort((a, b) =>
     (a.fullName || "").localeCompare(b.fullName || "", "nl")
   );
 
@@ -464,13 +505,23 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
           Actief en niet-actief personeel met volledige gegevens &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <UserSearch className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="w-52" data-testid="select-status-person">
-              <SelectValue placeholder="Alle medewerkers" />
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId("all"); }}>
+            <SelectTrigger className="w-48" data-testid="select-status-type">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle medewerkers</SelectItem>
+              <SelectItem value="vast">Vaste medewerkers</SelectItem>
+              <SelectItem value="tijdelijk">Tijdelijke medewerkers</SelectItem>
+            </SelectContent>
+          </Select>
+          <UserSearch className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger className="w-48" data-testid="select-status-person">
+              <SelectValue placeholder="Alle personen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle personen</SelectItem>
               {allSorted.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
@@ -481,7 +532,7 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
 
       <StatusRapport
         title="Actief personeel"
-        users={users}
+        users={typeFiltered}
         filterKey="actief"
         selectedUserId={selectedUserId}
       />
@@ -489,7 +540,7 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
       <div className="border-t pt-6">
         <StatusRapport
           title="Niet-actief personeel"
-          users={users}
+          users={typeFiltered}
           filterKey="inactief"
           selectedUserId={selectedUserId}
         />
