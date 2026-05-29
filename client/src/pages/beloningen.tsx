@@ -2183,11 +2183,15 @@ function ActieForm({ onSave, onCancel, isPending, testPrefix }: {
   );
 }
 
-function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
+function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete, onMoveUp, onMoveDown, isFirst, isLast }: {
   onderdeel: JaarplanOnderdeel;
   jaarplanId: string;
   canEdit: boolean;
   onDelete: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }) {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
@@ -2309,6 +2313,26 @@ function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
           </div>
         ) : (
           <>
+            {canEdit && (
+              <div className="flex flex-col shrink-0">
+                <button
+                  className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+                  onClick={e => { e.stopPropagation(); onMoveUp?.(); }}
+                  disabled={isFirst}
+                  data-testid={`button-onderdeel-up-${onderdeel.id}`}
+                >
+                  <ChevronUp className="h-3 w-3" />
+                </button>
+                <button
+                  className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+                  onClick={e => { e.stopPropagation(); onMoveDown?.(); }}
+                  disabled={isLast}
+                  data-testid={`button-onderdeel-down-${onderdeel.id}`}
+                >
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
+            )}
             <button className="flex items-center gap-1 flex-1 min-w-0 text-xs font-semibold hover:text-foreground transition-colors text-left" onClick={() => setExpanded(v => !v)} data-testid={`button-toggle-onderdeel-${onderdeel.id}`}>
               {expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
               <FolderOpen className="h-3 w-3 shrink-0 text-primary" />
@@ -2470,6 +2494,23 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete, onMoveUp, onMoveDow
     onError: () => toast({ title: "Verwijderen mislukt", variant: "destructive" }),
   });
 
+  const reorderOnderdelenMutation = useMutation({
+    mutationFn: (ids: string[]) => apiRequest("PATCH", `/api/jaarplan/${item.id}/onderdelen/reorder`, { orderedIds: ids }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", item.id, "onderdelen"] }),
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", item.id, "onderdelen"] });
+      toast({ title: "Volgorde opslaan mislukt", variant: "destructive" });
+    },
+  });
+
+  const handleMoveOnderdeel = (fromIndex: number, toIndex: number) => {
+    const reordered = [...onderdelen];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    queryClient.setQueryData(["/api/jaarplan", item.id, "onderdelen"], reordered);
+    reorderOnderdelenMutation.mutate(reordered.map(o => o.id));
+  };
+
   const statusOpt = statusOptions.find(s => s.value === item.status) || statusOptions[0];
   const looseActies = acties.filter(a => !a.onderdeelId);
   const totalCount = acties.length + onderdelen.length;
@@ -2587,13 +2628,17 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete, onMoveUp, onMoveDow
 
         {showActies && onderdelen.length > 0 && (
           <div className="space-y-1.5">
-            {onderdelen.map(ond => (
+            {onderdelen.map((ond, idx) => (
               <OnderdeelSection
                 key={ond.id}
                 onderdeel={ond}
                 jaarplanId={item.id}
                 canEdit={canEdit}
                 onDelete={() => deleteOnderdeelMutation.mutate(ond.id)}
+                isFirst={idx === 0}
+                isLast={idx === onderdelen.length - 1}
+                onMoveUp={idx > 0 ? () => handleMoveOnderdeel(idx, idx - 1) : undefined}
+                onMoveDown={idx < onderdelen.length - 1 ? () => handleMoveOnderdeel(idx, idx + 1) : undefined}
               />
             ))}
           </div>

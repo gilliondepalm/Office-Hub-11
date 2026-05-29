@@ -2859,6 +2859,21 @@ export async function registerRoutes(
     res.json(onderdelen);
   });
 
+  app.patch("/api/jaarplan/:id/onderdelen/reorder", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    const afdeling = await getJaarplanAfdelingForItem(req.params.id);
+    if (afdeling && !managerDeptAllowed(user, afdeling)) {
+      return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
+    }
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds)) return res.status(400).json({ message: "orderedIds is verplicht" });
+    await storage.reorderJaarplanOnderdelen(req.params.id, orderedIds);
+    res.json({ success: true });
+  });
+
   app.post("/api/jaarplan/:id/onderdelen", requireAuth, async (req, res) => {
     const user = (req as any).user;
     if (!canEditJaarplan(user.role)) {

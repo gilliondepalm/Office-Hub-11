@@ -312,6 +312,7 @@ export const jaarplanOnderdelen = pgTable("jaarplan_onderdelen", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   jaarplanId: varchar("jaarplan_id").references(() => jaarplanItems.id).notNull(),
   naam: text("naam").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

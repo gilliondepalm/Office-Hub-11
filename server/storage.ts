@@ -1207,7 +1207,15 @@ export class DatabaseStorage implements IStorage {
   async getJaarplanOnderdelen(jaarplanId: string): Promise<JaarplanOnderdeel[]> {
     return await db.select().from(jaarplanOnderdelen)
       .where(eq(jaarplanOnderdelen.jaarplanId, jaarplanId))
-      .orderBy(jaarplanOnderdelen.createdAt);
+      .orderBy(jaarplanOnderdelen.sortOrder, jaarplanOnderdelen.createdAt);
+  }
+
+  async reorderJaarplanOnderdelen(jaarplanId: string, orderedIds: string[]): Promise<void> {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.update(jaarplanOnderdelen)
+        .set({ sortOrder: i })
+        .where(eq(jaarplanOnderdelen.id, orderedIds[i]));
+    }
   }
 
   async createJaarplanOnderdeel(onderdeel: InsertJaarplanOnderdeel): Promise<JaarplanOnderdeel> {

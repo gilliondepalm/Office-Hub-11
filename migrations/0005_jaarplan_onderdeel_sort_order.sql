@@ -1,0 +1,2 @@
+ALTER TABLE jaarplan_onderdelen
+  ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
