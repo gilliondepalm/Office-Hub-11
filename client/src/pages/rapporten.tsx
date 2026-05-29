@@ -524,6 +524,7 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
               ))}
             </SelectContent>
           </Select>
+          <PrintButton label="Afdrukken" />
         </div>
       </div>
 
