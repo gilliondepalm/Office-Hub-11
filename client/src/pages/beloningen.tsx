@@ -2721,6 +2721,9 @@ function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate
   });
 
   const latestPct = momenten.length > 0 ? momenten[momenten.length - 1].percentage : null;
+  const maxPct = momenten.length > 0
+    ? Math.max(...momenten.map(m => m.percentage ?? 0))
+    : null;
 
   if (editing) {
     return (
@@ -2832,7 +2835,10 @@ function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate
 
             {canEdit && !showVoortgangForm && (
               <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1 mt-0.5"
-                onClick={() => setShowVoortgangForm(true)}>
+                onClick={() => {
+                  if (maxPct != null) setVPercentage(String(maxPct));
+                  setShowVoortgangForm(true);
+                }}>
                 <Plus className="h-2.5 w-2.5 mr-1" />Voortgang toevoegen
               </Button>
             )}
