@@ -104,7 +104,7 @@ type VerjaardagenSortField = "kadasterId" | "naam" | "geboortedatum" | "leeftijd
 
 function VerjaardagenTab({ users }: { users: UserExt[] }) {
   const { field: sortField, dir: sortDir, handleSort } = useSortState<VerjaardagenSortField>("geboortedatum");
-  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<"all" | "vast" | "tijdelijk">("all");
 
   const today = new Date();
@@ -122,7 +122,7 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
     (a.fullName || "").localeCompare(b.fullName || "", "nl")
   );
 
-  const filtered = selectedUserId === "all" ? withBirthday : withBirthday.filter(u => u.id === selectedUserId);
+  const filtered = selectedUserId === "" ? withBirthday : withBirthday.filter(u => u.id === selectedUserId);
 
   const sorted = [...filtered].sort((a, b) => {
     let cmp = 0;
@@ -160,7 +160,7 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
           Verjaardagen van actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId("all"); }}>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId(""); }}>
             <SelectTrigger className="w-48" data-testid="select-verjaardagen-type">
               <SelectValue />
             </SelectTrigger>
@@ -173,10 +173,9 @@ function VerjaardagenTab({ users }: { users: UserExt[] }) {
           <UserSearch className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedUserId} onValueChange={setSelectedUserId}>
             <SelectTrigger className="w-48" data-testid="select-verjaardagen-person">
-              <SelectValue placeholder="Alle personen" />
+              <SelectValue placeholder="Kies een medewerker" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle personen</SelectItem>
               {allSorted.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
@@ -231,7 +230,7 @@ type JubileumSortField = "naam" | "afdeling" | "startDate" | "dienstjaren";
 
 function JubileaTab({ users }: { users: UserExt[] }) {
   const { field: sortField, dir: sortDir, handleSort } = useSortState<JubileumSortField>("dienstjaren", "desc");
-  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<"all" | "vast" | "tijdelijk">("all");
 
   const typeFiltered = users.filter(u => {
@@ -245,7 +244,7 @@ function JubileaTab({ users }: { users: UserExt[] }) {
     (a.fullName || "").localeCompare(b.fullName || "", "nl")
   );
 
-  const filtered = selectedUserId === "all" ? withStart : withStart.filter(u => u.id === selectedUserId);
+  const filtered = selectedUserId === "" ? withStart : withStart.filter(u => u.id === selectedUserId);
 
   const milestones = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
@@ -280,7 +279,7 @@ function JubileaTab({ users }: { users: UserExt[] }) {
           Dienstjaren van actieve medewerkers &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId("all"); }}>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId(""); }}>
             <SelectTrigger className="w-48" data-testid="select-jubilea-type">
               <SelectValue />
             </SelectTrigger>
@@ -293,10 +292,9 @@ function JubileaTab({ users }: { users: UserExt[] }) {
           <UserSearch className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedUserId} onValueChange={setSelectedUserId}>
             <SelectTrigger className="w-48" data-testid="select-jubilea-person">
-              <SelectValue placeholder="Alle personen" />
+              <SelectValue placeholder="Kies een medewerker" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle personen</SelectItem>
               {allSorted.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
@@ -481,7 +479,7 @@ function StatusRapport({
 }
 
 function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
-  const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<"all" | "vast" | "tijdelijk">("all");
 
   const typeFiltered = users.filter(u => {
@@ -505,7 +503,7 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
           Actief en niet-actief personeel met volledige gegevens &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId("all"); }}>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as typeof typeFilter); setSelectedUserId(""); }}>
             <SelectTrigger className="w-48" data-testid="select-status-type">
               <SelectValue />
             </SelectTrigger>
@@ -518,10 +516,9 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
           <UserSearch className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedUserId} onValueChange={setSelectedUserId}>
             <SelectTrigger className="w-48" data-testid="select-status-person">
-              <SelectValue placeholder="Alle personen" />
+              <SelectValue placeholder="Kies een medewerker" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle personen</SelectItem>
               {allSorted.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
               ))}
