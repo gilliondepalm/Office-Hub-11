@@ -2807,15 +2807,27 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
             </Button>
           )}
           {canEdit && showActieForm && (
-            <div className="flex gap-2 mt-2 items-end">
-              <Input type="date" value={actieDatum} onChange={e => setActieDatum(e.target.value)} className="h-7 text-xs w-36" />
-              <Input value={actieText} onChange={e => setActieText(e.target.value)} placeholder="Beschrijving..." className="h-7 text-xs flex-1" />
-              <Button size="sm" className="h-7 text-xs" onClick={() => { if (actieText.trim()) addActieMutation.mutate(); }} disabled={addActieMutation.isPending}>
-                <Save className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setShowActieForm(false); setActieText(""); }}>
-                <X className="h-3 w-3" />
-              </Button>
+            <div className="bg-muted/40 rounded-md p-2 mt-2 space-y-2">
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground shrink-0">Datum:</span>
+                <Input type="date" value={actieDatum} onChange={e => setActieDatum(e.target.value)} className="h-7 text-xs w-36" />
+              </div>
+              <Textarea
+                value={actieText}
+                onChange={e => setActieText(e.target.value)}
+                placeholder="Beschrijf de activiteit..."
+                rows={2}
+                className="text-xs w-full"
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowActieForm(false); setActieText(""); }}>
+                  Annuleren
+                </Button>
+                <Button size="sm" className="h-7 text-xs" onClick={() => { if (actieText.trim()) addActieMutation.mutate(); }} disabled={!actieText.trim() || addActieMutation.isPending}>
+                  <Save className="h-3 w-3 mr-1" />Opslaan
+                </Button>
+              </div>
             </div>
           )}
         </div>
