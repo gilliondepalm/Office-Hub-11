@@ -3761,7 +3761,7 @@ export default function BeloningenPage() {
           data-testid="tab-medewerker-jaarplan"
         >
           <FileText className="h-4 w-4 inline mr-1.5 -mt-0.5" />
-          Jaarplan medewerker
+          Voortgang
         </button>
         <button
           onClick={() => setActiveTab("beloningsysteem")}
