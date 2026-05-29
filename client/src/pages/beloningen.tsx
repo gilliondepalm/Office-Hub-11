@@ -25,7 +25,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { Reward, User, FunctioneringReview, Competency, BeoordelingReview, BeoordelingScore, JaarplanItem, JaarplanActie, JaarplanOnderdeel, YearlyAward, MedewerkerJaarplanItem, MedewerkerJaarplanActie } from "@shared/schema";
+import type { Reward, User, FunctioneringReview, Competency, BeoordelingReview, BeoordelingScore, JaarplanItem, JaarplanActie, JaarplanOnderdeel, YearlyAward, MedewerkerJaarplanItem, MedewerkerJaarplanActie, MedewerkerJaarplanVoortgang } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
 import { isAdminRole } from "@shared/schema";
 import { formatDate } from "@/lib/dateUtils";
@@ -2675,14 +2675,52 @@ function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate
   onStatusChange: (status: string) => void;
   onUpdate?: (data: { datum?: string; actie?: string; startdatum?: string | null; einddatum?: string | null; voortgang?: number | null }) => void;
 }) {
+  const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [editDatum, setEditDatum] = useState(actie.datum ?? "");
   const [editTekst, setEditTekst] = useState(actie.actie ?? "");
   const [editStart, setEditStart] = useState(actie.startdatum ?? "");
   const [editEind, setEditEind] = useState(actie.einddatum ?? "");
   const [editVoortgang, setEditVoortgang] = useState(actie.voortgang != null ? String(actie.voortgang) : "");
+  const [voortgangExpanded, setVoortgangExpanded] = useState(false);
+  const [showVoortgangForm, setShowVoortgangForm] = useState(false);
+  const [vDatum, setVDatum] = useState(new Date().toLocaleDateString("en-CA", { timeZone: "America/Curacao" }));
+  const [vToelichting, setVToelichting] = useState("");
+  const [vPercentage, setVPercentage] = useState("");
 
   const statusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+
+  const voortgangQKey = ["/api/medewerker-jaarplan/acties", actie.id, "voortgang"];
+  const { data: momenten = [] } = useQuery<MedewerkerJaarplanVoortgang[]>({
+    queryKey: voortgangQKey,
+    queryFn: async () => {
+      const res = await fetch(`/api/medewerker-jaarplan/acties/${actie.id}/voortgang`, { credentials: "include" });
+      if (!res.ok) throw new Error("Ophalen mislukt");
+      return res.json();
+    },
+    enabled: voortgangExpanded,
+  });
+
+  const addVoortgangMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/medewerker-jaarplan/acties/${actie.id}/voortgang`, {
+      datum: vDatum,
+      toelichting: vToelichting,
+      percentage: vPercentage !== "" ? Number(vPercentage) : undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: voortgangQKey });
+      setVToelichting(""); setVPercentage(""); setShowVoortgangForm(false);
+      toast({ title: "Voortgang toegevoegd" });
+    },
+    onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+  });
+
+  const deleteVoortgangMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/medewerker-jaarplan/voortgang/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: voortgangQKey }),
+  });
+
+  const latestPct = momenten.length > 0 ? momenten[momenten.length - 1].percentage : null;
 
   if (editing) {
     return (
@@ -2700,23 +2738,13 @@ function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate
             <span className="text-muted-foreground shrink-0">Einddatum:</span>
             <Input type="date" value={editEind} onChange={e => setEditEind(e.target.value)} className="h-6 text-xs w-32" />
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground shrink-0">Voortgang %:</span>
-            <Input type="number" min="0" max="100" value={editVoortgang} onChange={e => setEditVoortgang(e.target.value)} className="h-6 text-xs w-16" />
-          </div>
         </div>
         <Textarea value={editTekst} onChange={e => setEditTekst(e.target.value)} rows={2} className="text-xs w-full" />
         <div className="flex gap-2 justify-end">
           <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => setEditing(false)}>Annuleren</Button>
           <Button size="sm" className="h-6 text-xs" onClick={() => {
             if (editTekst.trim() && onUpdate) {
-              onUpdate({
-                datum: editDatum || undefined,
-                actie: editTekst.trim(),
-                startdatum: editStart || null,
-                einddatum: editEind || null,
-                voortgang: editVoortgang !== "" ? Number(editVoortgang) : null,
-              });
+              onUpdate({ datum: editDatum || undefined, actie: editTekst.trim(), startdatum: editStart || null, einddatum: editEind || null });
               setEditing(false);
             }
           }}>
@@ -2728,10 +2756,19 @@ function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate
   }
 
   return (
-    <div className="py-1.5 text-xs">
+    <div className="py-1.5 text-xs border-b border-border/30 last:border-0">
       <div className="flex items-start gap-2">
         <span className="text-muted-foreground whitespace-nowrap font-medium min-w-[80px]">{formatDate(actie.datum)}</span>
-        <p className="flex-1 whitespace-pre-wrap">{actie.actie}</p>
+        <div className="flex-1 min-w-0">
+          <p className="whitespace-pre-wrap">{actie.actie}</p>
+          {(actie.startdatum || actie.einddatum) && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {actie.startdatum ? formatDate(actie.startdatum) : ""}
+              {actie.startdatum && actie.einddatum ? " – " : ""}
+              {actie.einddatum ? formatDate(actie.einddatum) : ""}
+            </p>
+          )}
+        </div>
         {canEdit ? (
           <Select value={actie.status ?? "niet gestart"} onValueChange={onStatusChange}>
             <SelectTrigger className={`h-5 w-auto text-[10px] px-1.5 py-0 border-0 ${statusOpt.color}`}>
@@ -2755,20 +2792,90 @@ function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate
           </>
         )}
       </div>
-      {(actie.startdatum || actie.einddatum || actie.voortgang != null) && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 ml-[88px] text-[10px] text-muted-foreground">
-          {(actie.startdatum || actie.einddatum) && (
-            <span>
-              {actie.startdatum ? formatDate(actie.startdatum) : ""}
-              {actie.startdatum && actie.einddatum ? " – " : ""}
-              {actie.einddatum ? formatDate(actie.einddatum) : ""}
-            </span>
+
+      {/* Voortgangsmomenten sectie */}
+      <div className="ml-[88px] mt-1">
+        <button
+          className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+          onClick={() => { setVoortgangExpanded(v => !v); }}
+        >
+          {voortgangExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          Voortgang
+          {latestPct != null && !voortgangExpanded && (
+            <span className="ml-1 text-muted-foreground font-medium">{latestPct}%</span>
           )}
-          {actie.voortgang != null && (
-            <span className="font-medium">{actie.voortgang}% voortgang</span>
+          {momenten.length > 0 && !voortgangExpanded && (
+            <span className="text-muted-foreground">({momenten.length})</span>
           )}
-        </div>
-      )}
+        </button>
+
+        {voortgangExpanded && (
+          <div className="mt-1 space-y-1 pl-1 border-l-2 border-muted ml-1">
+            {momenten.length === 0 && !showVoortgangForm && (
+              <p className="text-[10px] text-muted-foreground italic">Nog geen voortgang geregistreerd</p>
+            )}
+            {momenten.map(m => (
+              <div key={m.id} className="flex items-start gap-2 py-0.5">
+                <span className="text-muted-foreground whitespace-nowrap min-w-[72px]">{formatDate(m.datum)}</span>
+                <p className="flex-1 whitespace-pre-wrap text-[10px]">{m.toelichting}</p>
+                {m.percentage != null && (
+                  <span className="text-[10px] font-semibold text-primary whitespace-nowrap">{m.percentage}%</span>
+                )}
+                {canEdit && (
+                  <Button variant="ghost" size="sm" className="h-4 w-4 p-0 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => deleteVoortgangMutation.mutate(m.id)}>
+                    <Trash2 className="h-2.5 w-2.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+
+            {canEdit && !showVoortgangForm && (
+              <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1 mt-0.5"
+                onClick={() => setShowVoortgangForm(true)}>
+                <Plus className="h-2.5 w-2.5 mr-1" />Voortgang toevoegen
+              </Button>
+            )}
+
+            {canEdit && showVoortgangForm && (
+              <div className="bg-muted/50 rounded p-2 mt-1 space-y-1.5">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground shrink-0">Datum:</span>
+                    <Input type="date" value={vDatum} onChange={e => setVDatum(e.target.value)} className="h-6 text-[10px] w-28" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground shrink-0">Voortgang %:</span>
+                    <Input type="number" min="0" max="100" value={vPercentage}
+                      onChange={e => setVPercentage(e.target.value)}
+                      placeholder="0–100"
+                      className="h-6 text-[10px] w-14" />
+                  </div>
+                </div>
+                <Textarea
+                  value={vToelichting}
+                  onChange={e => setVToelichting(e.target.value)}
+                  placeholder="Toelichting voortgang afgelopen periode..."
+                  rows={2}
+                  className="text-[10px] w-full"
+                  autoFocus
+                />
+                <div className="flex gap-1.5 justify-end">
+                  <Button variant="outline" size="sm" className="h-6 text-[10px]"
+                    onClick={() => { setShowVoortgangForm(false); setVToelichting(""); setVPercentage(""); }}>
+                    Annuleren
+                  </Button>
+                  <Button size="sm" className="h-6 text-[10px]"
+                    disabled={!vToelichting.trim() || addVoortgangMutation.isPending}
+                    onClick={() => { if (vToelichting.trim()) addVoortgangMutation.mutate(); }}>
+                    <Save className="h-2.5 w-2.5 mr-1" />Opslaan
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

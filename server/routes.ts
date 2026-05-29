@@ -20,7 +20,7 @@ import {
   insertFunctioneringReviewSchema,
   insertCompetencySchema, insertBeoordelingReviewSchema, insertBeoordelingScoreSchema,
   insertJaarplanItemSchema, insertJaarplanOnderdeelSchema, insertJaarplanActieSchema,
-  insertMedewerkerJaarplanItemSchema, insertMedewerkerJaarplanActieSchema,
+  insertMedewerkerJaarplanItemSchema, insertMedewerkerJaarplanActieSchema, insertMedewerkerJaarplanVoortgangSchema,
   insertHelpContentSchema,
   insertYearlyAwardSchema,
   insertKartografieProductieSchema,
@@ -3100,6 +3100,41 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Geen toegang" });
     }
     await storage.deleteMedewerkerJaarplanActie(req.params.actieId);
+    res.json({ success: true });
+  });
+
+  // ── Voortgangsmomenten per activiteit ──────────────────────────────────────
+  app.get("/api/medewerker-jaarplan/acties/:actieId/voortgang", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const actie = await storage.getMedewerkerJaarplanActieById(req.params.actieId);
+    if (!actie) return res.status(404).json({ message: "Niet gevonden" });
+    const item = await getMedewerkerJaarplanOwner(actie.jaarplanId);
+    if (!item || !canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    const voortgang = await storage.getVoortgangForActie(req.params.actieId);
+    res.json(voortgang);
+  });
+
+  app.post("/api/medewerker-jaarplan/acties/:actieId/voortgang", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    const actie = await storage.getMedewerkerJaarplanActieById(req.params.actieId);
+    if (!actie) return res.status(404).json({ message: "Niet gevonden" });
+    const item = await getMedewerkerJaarplanOwner(actie.jaarplanId);
+    if (!item || !canEditMedewerkerJaarplan(user, item.userId)) {
+      return res.status(403).json({ message: "Geen toegang" });
+    }
+    try {
+      const parsed = insertMedewerkerJaarplanVoortgangSchema.parse({ ...req.body, actieId: req.params.actieId, createdBy: user.id });
+      const created = await storage.createVoortgang(parsed);
+      res.json(created);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Validatiefout" });
+    }
+  });
+
+  app.delete("/api/medewerker-jaarplan/voortgang/:id", requireAuth, async (req, res) => {
+    await storage.deleteVoortgang(req.params.id);
     res.json({ success: true });
   });
 

@@ -365,6 +365,18 @@ export const medewerkerJaarplanActies = pgTable("medewerker_jaarplan_acties", {
 
 export const insertMedewerkerJaarplanActieSchema = createInsertSchema(medewerkerJaarplanActies).omit({ id: true, createdAt: true });
 
+export const medewerkerJaarplanVoortgang = pgTable("medewerker_jaarplan_voortgang", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actieId: varchar("actie_id").references(() => medewerkerJaarplanActies.id).notNull(),
+  datum: date("datum").notNull(),
+  toelichting: text("toelichting").notNull(),
+  percentage: integer("percentage"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMedewerkerJaarplanVoortgangSchema = createInsertSchema(medewerkerJaarplanVoortgang).omit({ id: true, createdAt: true });
+
 export const loginSchema = z.object({
   username: z.string().min(1, "Gebruikersnaam is verplicht"),
   password: z.string().min(1, "Wachtwoord is verplicht"),
@@ -420,6 +432,8 @@ export type InsertMedewerkerJaarplanItem = z.infer<typeof insertMedewerkerJaarpl
 export type MedewerkerJaarplanItem = typeof medewerkerJaarplanItems.$inferSelect;
 export type InsertMedewerkerJaarplanActie = z.infer<typeof insertMedewerkerJaarplanActieSchema>;
 export type MedewerkerJaarplanActie = typeof medewerkerJaarplanActies.$inferSelect;
+export type InsertMedewerkerJaarplanVoortgang = z.infer<typeof insertMedewerkerJaarplanVoortgangSchema>;
+export type MedewerkerJaarplanVoortgang = typeof medewerkerJaarplanVoortgang.$inferSelect;
 
 export const helpContentTable = pgTable("help_content", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -5,7 +5,7 @@ import {
   users, events, announcements, departments, absences, absenceCancellations, rewards, applications, appAccess, messages,
   aoProcedures, aoInstructions, positionHistory, personalDevelopment, legislationLinks, caoDocuments, siteSettings,
   functioneringReviews, competencies, beoordelingReviews, beoordelingScores, jaarplanItems, jaarplanOnderdelen, jaarplanActies,
-  medewerkerJaarplanItems, medewerkerJaarplanActies,
+  medewerkerJaarplanItems, medewerkerJaarplanActies, medewerkerJaarplanVoortgang,
   werktijden, overuurAanvragen, importLog, prikklokEventLog, correctieverzoeken, familyMembers,
   type FamilyMember, type InsertFamilyMember,
   type Werktijden, type InsertWerktijden,
@@ -38,6 +38,7 @@ import {
   type JaarplanActie, type InsertJaarplanActie,
   type MedewerkerJaarplanItem, type InsertMedewerkerJaarplanItem,
   type MedewerkerJaarplanActie, type InsertMedewerkerJaarplanActie,
+  type MedewerkerJaarplanVoortgang, type InsertMedewerkerJaarplanVoortgang,
   type HelpContent, type InsertHelpContent,
   type OfficialHoliday, type InsertOfficialHoliday,
   type Snipperdag, type InsertSnipperdag,
@@ -223,6 +224,9 @@ export interface IStorage {
   createMedewerkerJaarplanActie(actie: InsertMedewerkerJaarplanActie): Promise<MedewerkerJaarplanActie>;
   updateMedewerkerJaarplanActie(id: string, data: Partial<InsertMedewerkerJaarplanActie>): Promise<MedewerkerJaarplanActie>;
   deleteMedewerkerJaarplanActie(id: string): Promise<void>;
+  getVoortgangForActie(actieId: string): Promise<MedewerkerJaarplanVoortgang[]>;
+  createVoortgang(data: InsertMedewerkerJaarplanVoortgang): Promise<MedewerkerJaarplanVoortgang>;
+  deleteVoortgang(id: string): Promise<void>;
 
   getAllHelpContent(): Promise<HelpContent[]>;
   upsertHelpContent(data: InsertHelpContent): Promise<HelpContent>;
@@ -1348,6 +1352,21 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMedewerkerJaarplanActie(id: string): Promise<void> {
     await db.delete(medewerkerJaarplanActies).where(eq(medewerkerJaarplanActies.id, id));
+  }
+
+  async getVoortgangForActie(actieId: string): Promise<MedewerkerJaarplanVoortgang[]> {
+    return db.select().from(medewerkerJaarplanVoortgang)
+      .where(eq(medewerkerJaarplanVoortgang.actieId, actieId))
+      .orderBy(medewerkerJaarplanVoortgang.datum);
+  }
+
+  async createVoortgang(data: InsertMedewerkerJaarplanVoortgang): Promise<MedewerkerJaarplanVoortgang> {
+    const [created] = await db.insert(medewerkerJaarplanVoortgang).values(data).returning();
+    return created;
+  }
+
+  async deleteVoortgang(id: string): Promise<void> {
+    await db.delete(medewerkerJaarplanVoortgang).where(eq(medewerkerJaarplanVoortgang.id, id));
   }
 
   async getAllHelpContent(): Promise<HelpContent[]> {
