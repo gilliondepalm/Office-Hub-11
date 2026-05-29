@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Printer, Users, Cake, Award, ActivitySquare, UserSearch, Clock } from "lucide-react";
+import { Printer, Users, Cake, Award, UserSearch, Clock } from "lucide-react";
 import { FamilyIcon } from "@/components/family-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -98,115 +98,6 @@ function useSortState<T extends string>(defaultField: T, defaultDir: "asc" | "de
     else { setField(f); setDir("asc"); }
   };
   return { field, dir, handleSort };
-}
-
-type InfoSortField = "kadasterId" | "naam" | "afdeling" | "cedulaNr" | "telefoonnr" | "mobielnr" | "adres";
-
-function MedewerkerInfoTab({ users }: { users: UserExt[] }) {
-  const { field: sortField, dir: sortDir, handleSort } = useSortState<InfoSortField>("naam");
-  const [selectedUserId, setSelectedUserId] = useState<string>("all");
-
-  const active = users.filter(u => u.active);
-  const allSorted = [...active].sort((a, b) =>
-    (a.fullName || "").localeCompare(b.fullName || "", "nl")
-  );
-
-  const filtered = selectedUserId === "all" ? active : active.filter(u => u.id === selectedUserId);
-
-  const sorted = [...filtered].sort((a, b) => {
-    let cmp = 0;
-    switch (sortField) {
-      case "kadasterId":
-        cmp = ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
-        break;
-      case "naam":
-        cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
-        break;
-      case "afdeling":
-        cmp = (a.department || "").localeCompare(b.department || "", "nl");
-        if (cmp === 0) cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
-        break;
-      case "cedulaNr":
-        cmp = ((a as any).cedulaNr || "").localeCompare((b as any).cedulaNr || "", "nl");
-        break;
-      case "telefoonnr":
-        cmp = ((a as any).telefoonnr || "").localeCompare((b as any).telefoonnr || "");
-        break;
-      case "mobielnr":
-        cmp = ((a as any).mobielnr || "").localeCompare((b as any).mobielnr || "");
-        break;
-      case "adres":
-        cmp = ((a as any).adres || "").localeCompare((b as any).adres || "", "nl");
-        break;
-    }
-    return sortDir === "asc" ? cmp : -cmp;
-  });
-
-  return (
-    <div className="space-y-4">
-      <style>{`@media print { @page { size: A4 landscape; margin: 1cm; } }`}</style>
-      <div className="hidden print:block mb-4 border-b pb-3">
-        <h1 className="text-xl font-bold">Kadaster Dashboard — Medewerker Informatie</h1>
-        <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
-      </div>
-      <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
-        <p className="text-sm text-muted-foreground">
-          Overzicht van medewerkergegevens — {active.length} actieve medewerkers &middot; klik kolomkop om te sorteren
-        </p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <UserSearch className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="w-52" data-testid="select-info-person">
-              <SelectValue placeholder="Alle medewerkers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle medewerkers</SelectItem>
-              {allSorted.map(u => (
-                <SelectItem key={u.id} value={u.id}>{u.fullName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <PrintButton label="Afdrukken" />
-        </div>
-      </div>
-      <div className="overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortHeader label="Kadaster ID" field="kadasterId" current={sortField} dir={sortDir} onClick={handleSort} />
-              <SortHeader label="Naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
-              <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} />
-              <SortHeader label="Cedulanr." field="cedulaNr" current={sortField} dir={sortDir} onClick={handleSort} />
-              <SortHeader label="Telefoonnr." field="telefoonnr" current={sortField} dir={sortDir} onClick={handleSort} />
-              <SortHeader label="Mobielnr." field="mobielnr" current={sortField} dir={sortDir} onClick={handleSort} />
-              <SortHeader label="Adres" field="adres" current={sortField} dir={sortDir} onClick={handleSort} />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sorted.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  Geen medewerkers gevonden
-                </TableCell>
-              </TableRow>
-            ) : (
-              sorted.map(u => (
-                <TableRow key={u.id} data-testid={`row-medewerker-info-${u.id}`} className="print:text-xs">
-                  <TableCell className="text-sm font-mono print:py-1">{u.kadasterId ?? "—"}</TableCell>
-                  <TableCell className="font-medium print:py-1">{u.fullName}</TableCell>
-                  <TableCell className="text-sm print:py-1">{u.department || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{(u as any).cedulaNr || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{(u as any).telefoonnr || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{(u as any).mobielnr || "—"}</TableCell>
-                  <TableCell className="text-sm print:py-1">{(u as any).adres || "—"}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
 }
 
 type VerjaardagenSortField = "kadasterId" | "naam" | "geboortedatum" | "leeftijd";
@@ -430,7 +321,7 @@ function JubileaTab({ users }: { users: UserExt[] }) {
   );
 }
 
-type StatusSortField = "naam" | "afdeling" | "functie" | "startDate" | "endDate" | "birthDate";
+type StatusSortField = "kadasterId" | "naam" | "afdeling" | "functie" | "startDate" | "endDate" | "birthDate" | "cedulaNr" | "telefoonnr" | "mobielnr" | "adres";
 
 function StatusRapport({
   title,
@@ -454,6 +345,9 @@ function StatusRapport({
   const sorted = [...filtered].sort((a, b) => {
     let cmp = 0;
     switch (sortField) {
+      case "kadasterId":
+        cmp = ((a as any).kadasterId ?? 0) - ((b as any).kadasterId ?? 0);
+        break;
       case "naam":
         cmp = (a.fullName || "").localeCompare(b.fullName || "", "nl");
         break;
@@ -473,9 +367,23 @@ function StatusRapport({
       case "birthDate":
         cmp = (a.birthDate || "").localeCompare(b.birthDate || "");
         break;
+      case "cedulaNr":
+        cmp = ((a as any).cedulaNr || "").localeCompare((b as any).cedulaNr || "", "nl");
+        break;
+      case "telefoonnr":
+        cmp = ((a as any).telefoonnr || "").localeCompare((b as any).telefoonnr || "");
+        break;
+      case "mobielnr":
+        cmp = ((a as any).mobielnr || "").localeCompare((b as any).mobielnr || "");
+        break;
+      case "adres":
+        cmp = ((a as any).adres || "").localeCompare((b as any).adres || "", "nl");
+        break;
     }
     return sortDir === "asc" ? cmp : -cmp;
   });
+
+  const colCount = filterKey === "inactief" ? 11 : 10;
 
   return (
     <div className="space-y-3">
@@ -490,6 +398,7 @@ function StatusRapport({
         <Table>
           <TableHeader>
             <TableRow>
+              <SortHeader label="Kadaster ID" field="kadasterId" current={sortField} dir={sortDir} onClick={handleSort} />
               <SortHeader label="Naam" field="naam" current={sortField} dir={sortDir} onClick={handleSort} />
               <SortHeader label="Afdeling" field="afdeling" current={sortField} dir={sortDir} onClick={handleSort} />
               <SortHeader label="Functie" field="functie" current={sortField} dir={sortDir} onClick={handleSort} />
@@ -498,26 +407,35 @@ function StatusRapport({
                 <SortHeader label="Datum uit Dienst" field="endDate" current={sortField} dir={sortDir} onClick={handleSort} />
               )}
               <SortHeader label="Geboortedatum" field="birthDate" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Cedulanr." field="cedulaNr" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Telefoonnr." field="telefoonnr" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Mobielnr." field="mobielnr" current={sortField} dir={sortDir} onClick={handleSort} />
+              <SortHeader label="Adres" field="adres" current={sortField} dir={sortDir} onClick={handleSort} />
             </TableRow>
           </TableHeader>
           <TableBody>
             {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={filterKey === "inactief" ? 6 : 5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={colCount} className="text-center text-muted-foreground py-8">
                   Geen medewerkers gevonden
                 </TableCell>
               </TableRow>
             ) : (
               sorted.map(u => (
-                <TableRow key={u.id} data-testid={`row-status-${filterKey}-${u.id}`}>
-                  <TableCell className="font-medium">{u.fullName}</TableCell>
-                  <TableCell className="text-sm">{u.department || "—"}</TableCell>
-                  <TableCell className="text-sm">{u.functie || "—"}</TableCell>
-                  <TableCell className="text-sm">{formatDateDutch(u.startDate)}</TableCell>
+                <TableRow key={u.id} data-testid={`row-status-${filterKey}-${u.id}`} className="print:text-xs">
+                  <TableCell className="text-sm font-mono print:py-1">{(u as any).kadasterId ?? "—"}</TableCell>
+                  <TableCell className="font-medium print:py-1">{u.fullName}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.department || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.functie || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{formatDateDutch(u.startDate)}</TableCell>
                   {filterKey === "inactief" && (
-                    <TableCell className="text-sm">{u.endDate ? formatDateDutch(u.endDate) : "—"}</TableCell>
+                    <TableCell className="text-sm print:py-1">{u.endDate ? formatDateDutch(u.endDate) : "—"}</TableCell>
                   )}
-                  <TableCell className="text-sm">{u.birthDate ? formatDateDutch(u.birthDate) : "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{u.birthDate ? formatDateDutch(u.birthDate) : "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).cedulaNr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).telefoonnr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).mobielnr || "—"}</TableCell>
+                  <TableCell className="text-sm print:py-1">{(u as any).adres || "—"}</TableCell>
                 </TableRow>
               ))
             )}
@@ -538,12 +456,12 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
   return (
     <div className="space-y-6">
       <div className="hidden print:block mb-4 border-b pb-3">
-        <h1 className="text-xl font-bold">Kadaster Dashboard — Medewerker Status</h1>
+        <h1 className="text-xl font-bold">Kadaster Dashboard — Medewerker Informatie</h1>
         <p className="text-sm text-gray-500">{new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</p>
       </div>
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
         <p className="text-sm text-muted-foreground">
-          Twee afzonderlijke rapporten: actief en niet-actief personeel &middot; klik kolomkop om te sorteren
+          Actief en niet-actief personeel met volledige gegevens &middot; klik kolomkop om te sorteren
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <UserSearch className="h-4 w-4 text-muted-foreground" />
@@ -893,9 +811,9 @@ export default function RapportenPage() {
             <Skeleton className="h-64 w-full" />
           </div>
         ) : (
-          <Tabs defaultValue="medewerker-info">
+          <Tabs defaultValue="medewerker-status">
             <TabsList className="mb-6 print:hidden flex-wrap h-auto gap-1">
-              <TabsTrigger value="medewerker-info" data-testid="tab-medewerker-info">
+              <TabsTrigger value="medewerker-status" data-testid="tab-medewerker-info">
                 <Users className="h-4 w-4 mr-2" />
                 Medewerker info
               </TabsTrigger>
@@ -907,10 +825,6 @@ export default function RapportenPage() {
                 <Award className="h-4 w-4 mr-2" />
                 Jubilea
               </TabsTrigger>
-              <TabsTrigger value="medewerker-status" data-testid="tab-medewerker-status">
-                <ActivitySquare className="h-4 w-4 mr-2" />
-                Medewerker status
-              </TabsTrigger>
               <TabsTrigger value="tijdelijk" data-testid="tab-tijdelijk">
                 <Clock className="h-4 w-4 mr-2" />
                 Tijdelijk
@@ -920,17 +834,14 @@ export default function RapportenPage() {
                 Gezin
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="medewerker-info">
-              <MedewerkerInfoTab users={users || []} />
+            <TabsContent value="medewerker-status">
+              <MedewerkerStatusTab users={users || []} />
             </TabsContent>
             <TabsContent value="verjaardagen">
               <VerjaardagenTab users={users || []} />
             </TabsContent>
             <TabsContent value="jubilea">
               <JubileaTab users={users || []} />
-            </TabsContent>
-            <TabsContent value="medewerker-status">
-              <MedewerkerStatusTab users={users || []} />
             </TabsContent>
             <TabsContent value="tijdelijk">
               <TijdelijkeTab users={users || []} />
