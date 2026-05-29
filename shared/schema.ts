@@ -300,6 +300,7 @@ export const jaarplanItems = pgTable("jaarplan_items", {
   startDatum: date("start_datum"),
   eindDatum: date("eind_datum"),
   status: text("status").default("niet gestart"),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -323,6 +324,7 @@ export const jaarplanActies = pgTable("jaarplan_acties", {
   datum: date("datum").notNull(),
   actie: text("actie").notNull(),
   status: text("status").default("niet gestart"),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

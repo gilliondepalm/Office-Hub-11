@@ -20,7 +20,7 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Award, Star, TrendingUp, ClipboardCheck, UserCheck, Gift, Printer, Save, ChevronLeft, ChevronRight, ChevronDown, Eye, FileText, Trash2, Settings, PlusCircle, X, Pencil, Building2, Layers, FolderOpen } from "lucide-react";
+import { Plus, Award, Star, TrendingUp, ClipboardCheck, UserCheck, Gift, Printer, Save, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Eye, FileText, Trash2, Settings, PlusCircle, X, Pencil, Building2, Layers, FolderOpen } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -2036,15 +2036,39 @@ const statusOptions = [
   { value: "geannuleerd", label: "Geannuleerd", color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
 ];
 
-function ActieRow({ actie, canEdit, onDelete, onStatusChange }: {
+function ActieRow({ actie, canEdit, onDelete, onStatusChange, onMoveUp, onMoveDown, isFirst, isLast }: {
   actie: JaarplanActie;
   canEdit: boolean;
   onDelete: () => void;
   onStatusChange: (status: string) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }) {
   const statusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
   return (
     <div className="flex items-start gap-2 text-xs py-1.5" data-testid={`jaarplan-actie-${actie.id}`}>
+      {canEdit && (
+        <div className="flex flex-col shrink-0">
+          <button
+            className="h-3.5 w-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+            onClick={onMoveUp}
+            disabled={isFirst}
+            data-testid={`button-actie-up-${actie.id}`}
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+          <button
+            className="h-3.5 w-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+            onClick={onMoveDown}
+            disabled={isLast}
+            data-testid={`button-actie-down-${actie.id}`}
+          >
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </div>
+      )}
       <span className="text-muted-foreground whitespace-nowrap font-medium min-w-[80px]">{formatDate(actie.datum)}</span>
       <p className="flex-1 whitespace-pre-wrap">{actie.actie}</p>
       {canEdit ? (
@@ -2228,11 +2252,15 @@ function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
   );
 }
 
-function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
+function JaarplanItemCard({ item, canEdit, onEdit, onDelete, onMoveUp, onMoveDown, isFirst, isLast }: {
   item: JaarplanItem;
   canEdit: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }) {
   const { toast } = useToast();
   const [showActies, setShowActies] = useState(false);
@@ -2248,6 +2276,19 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
       return res.json();
     },
   });
+
+  const reorderActiesMutation = useMutation({
+    mutationFn: (ids: string[]) => apiRequest("PATCH", `/api/jaarplan/${item.id}/acties/reorder`, { ids }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", item.id, "acties"] }),
+    onError: () => toast({ title: "Volgorde opslaan mislukt", variant: "destructive" }),
+  });
+
+  const handleMoveActie = (actiesArr: JaarplanActie[], fromIndex: number, toIndex: number) => {
+    const reordered = [...actiesArr];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    reorderActiesMutation.mutate(reordered.map(a => a.id));
+  };
 
   const { data: onderdelen = [] } = useQuery<JaarplanOnderdeel[]>({
     queryKey: ["/api/jaarplan", item.id, "onderdelen"],
@@ -2308,6 +2349,26 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
   return (
     <div className="border rounded-lg p-3" data-testid={`jaarplan-plan-${item.id}`}>
       <div className="flex items-start justify-between gap-2 mb-2">
+        {canEdit && (
+          <div className="flex flex-col shrink-0 mt-0.5">
+            <button
+              className="h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+              onClick={onMoveUp}
+              disabled={isFirst}
+              data-testid={`button-item-up-${item.id}`}
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+            <button
+              className="h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+              onClick={onMoveDown}
+              disabled={isLast}
+              data-testid={`button-item-down-${item.id}`}
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium whitespace-pre-wrap">{item.afspraken}</p>
           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -2409,10 +2470,14 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
 
         {showActies && looseActies.length > 0 && (
           <div className="divide-y divide-border/40">
-            {looseActies.map(actie => (
+            {looseActies.map((actie, idx) => (
               <ActieRow key={actie.id} actie={actie} canEdit={canEdit}
+                isFirst={idx === 0}
+                isLast={idx === looseActies.length - 1}
                 onDelete={() => deleteActieMutation.mutate(actie.id)}
                 onStatusChange={status => updateActieStatusMutation.mutate({ id: actie.id, status })}
+                onMoveUp={() => handleMoveActie(looseActies, idx, idx - 1)}
+                onMoveDown={() => handleMoveActie(looseActies, idx, idx + 1)}
               />
             ))}
           </div>
@@ -2876,6 +2941,19 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
     });
   };
 
+  const reorderItemsMutation = useMutation({
+    mutationFn: (ids: string[]) => apiRequest("PATCH", "/api/jaarplan/reorder", { ids }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan"] }),
+    onError: () => toast({ title: "Volgorde opslaan mislukt", variant: "destructive" }),
+  });
+
+  const handleMoveItem = (afdelingItems: JaarplanItem[], fromIndex: number, toIndex: number) => {
+    const reordered = [...afdelingItems];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    reorderItemsMutation.mutate(reordered.map(i => i.id));
+  };
+
   const groupedByAfdeling = items.reduce((acc, item) => {
     const dept = item.afdeling || "Onbekend";
     if (!acc[dept]) acc[dept] = [];
@@ -3014,13 +3092,17 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
-                {afdelingItems.map(item => (
+                {afdelingItems.map((item, idx) => (
                   <JaarplanItemCard
                     key={item.id}
                     item={item}
                     canEdit={isAdmin || (isPureManager && item.afdeling === myDept)}
                     onEdit={() => handleEditItem(item)}
                     onDelete={() => deleteMutation.mutate(item.id)}
+                    isFirst={idx === 0}
+                    isLast={idx === afdelingItems.length - 1}
+                    onMoveUp={() => handleMoveItem(afdelingItems, idx, idx - 1)}
+                    onMoveDown={() => handleMoveItem(afdelingItems, idx, idx + 1)}
                   />
                 ))}
               </CardContent>

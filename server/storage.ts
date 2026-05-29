@@ -197,6 +197,7 @@ export interface IStorage {
   createJaarplanItem(item: InsertJaarplanItem): Promise<JaarplanItem>;
   updateJaarplanItem(id: string, data: Partial<InsertJaarplanItem>): Promise<JaarplanItem>;
   deleteJaarplanItem(id: string): Promise<void>;
+  reorderJaarplanItems(ids: string[]): Promise<void>;
   getJaarplanOnderdelen(jaarplanId: string): Promise<JaarplanOnderdeel[]>;
   getJaarplanOnderdeelById(id: string): Promise<JaarplanOnderdeel | undefined>;
   createJaarplanOnderdeel(onderdeel: InsertJaarplanOnderdeel): Promise<JaarplanOnderdeel>;
@@ -208,6 +209,7 @@ export interface IStorage {
   createJaarplanActie(actie: InsertJaarplanActie): Promise<JaarplanActie>;
   updateJaarplanActie(id: string, data: Partial<InsertJaarplanActie>): Promise<JaarplanActie>;
   deleteJaarplanActie(id: string): Promise<void>;
+  reorderJaarplanActies(ids: string[]): Promise<void>;
 
   getMedewerkerJaarplanItems(userId: string, year: number): Promise<MedewerkerJaarplanItem[]>;
   getMedewerkerJaarplanItemsByDept(department: string, year: number): Promise<MedewerkerJaarplanItem[]>;
@@ -1172,9 +1174,18 @@ export class DatabaseStorage implements IStorage {
   async getJaarplanItemsByYear(year: number, afdeling?: string): Promise<JaarplanItem[]> {
     if (afdeling) {
       return await db.select().from(jaarplanItems)
-        .where(and(eq(jaarplanItems.year, year), eq(jaarplanItems.afdeling, afdeling)));
+        .where(and(eq(jaarplanItems.year, year), eq(jaarplanItems.afdeling, afdeling)))
+        .orderBy(jaarplanItems.sortOrder, jaarplanItems.createdAt);
     }
-    return await db.select().from(jaarplanItems).where(eq(jaarplanItems.year, year));
+    return await db.select().from(jaarplanItems)
+      .where(eq(jaarplanItems.year, year))
+      .orderBy(jaarplanItems.sortOrder, jaarplanItems.createdAt);
+  }
+
+  async reorderJaarplanItems(ids: string[]): Promise<void> {
+    for (let i = 0; i < ids.length; i++) {
+      await db.update(jaarplanItems).set({ sortOrder: i, updatedAt: new Date() }).where(eq(jaarplanItems.id, ids[i]));
+    }
   }
 
   async createJaarplanItem(item: InsertJaarplanItem): Promise<JaarplanItem> {
@@ -1217,13 +1228,19 @@ export class DatabaseStorage implements IStorage {
   async getJaarplanActies(jaarplanId: string): Promise<JaarplanActie[]> {
     return await db.select().from(jaarplanActies)
       .where(eq(jaarplanActies.jaarplanId, jaarplanId))
-      .orderBy(jaarplanActies.datum);
+      .orderBy(jaarplanActies.sortOrder, jaarplanActies.datum);
   }
 
   async getJaarplanActiesByOnderdeel(onderdeelId: string): Promise<JaarplanActie[]> {
     return await db.select().from(jaarplanActies)
       .where(eq(jaarplanActies.onderdeelId, onderdeelId))
-      .orderBy(jaarplanActies.datum);
+      .orderBy(jaarplanActies.sortOrder, jaarplanActies.datum);
+  }
+
+  async reorderJaarplanActies(ids: string[]): Promise<void> {
+    for (let i = 0; i < ids.length; i++) {
+      await db.update(jaarplanActies).set({ sortOrder: i }).where(eq(jaarplanActies.id, ids[i]));
+    }
   }
 
   async getJaarplanItemById(id: string): Promise<JaarplanItem | undefined> {

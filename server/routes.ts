@@ -2757,6 +2757,15 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/jaarplan/reorder", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) return res.status(403).json({ message: "Geen toegang" });
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: "ids array vereist" });
+    await storage.reorderJaarplanItems(ids);
+    res.json({ success: true });
+  });
+
   app.delete("/api/jaarplan/:id", requireAuth, async (req, res) => {
     const user = (req as any).user;
     if (!canEditJaarplan(user.role)) {
@@ -2795,6 +2804,15 @@ export async function registerRoutes(
     } catch (err: any) {
       res.status(400).json({ message: err.message || "Validatiefout" });
     }
+  });
+
+  app.patch("/api/jaarplan/:id/acties/reorder", requireAuth, async (req, res) => {
+    const user = (req as any).user;
+    if (!canEditJaarplan(user.role)) return res.status(403).json({ message: "Geen toegang" });
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ message: "ids array vereist" });
+    await storage.reorderJaarplanActies(ids);
+    res.json({ success: true });
   });
 
   app.delete("/api/jaarplan/acties/:actieId", requireAuth, async (req, res) => {
