@@ -1,0 +1,4 @@
+ALTER TABLE jaarplan_acties
+  ADD COLUMN IF NOT EXISTS startdatum DATE,
+  ADD COLUMN IF NOT EXISTS einddatum DATE,
+  ADD COLUMN IF NOT EXISTS opmerking TEXT;

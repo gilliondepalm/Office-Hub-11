@@ -2838,8 +2838,15 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Geen toegang tot deze afdeling" });
     }
     try {
-      const { status } = req.body;
-      const updated = await storage.updateJaarplanActie(req.params.actieId, { status });
+      const { status, datum, actie, startdatum, einddatum, opmerking } = req.body;
+      const data: Record<string, unknown> = {};
+      if (status !== undefined) data.status = status;
+      if (datum !== undefined) data.datum = datum;
+      if (actie !== undefined) data.actie = actie;
+      if (startdatum !== undefined) data.startdatum = startdatum;
+      if (einddatum !== undefined) data.einddatum = einddatum;
+      if (opmerking !== undefined) data.opmerking = opmerking;
+      const updated = await storage.updateJaarplanActie(req.params.actieId, data as any);
       res.json(updated);
     } catch (err: any) {
       res.status(400).json({ message: err.message || "Bijwerken mislukt" });
