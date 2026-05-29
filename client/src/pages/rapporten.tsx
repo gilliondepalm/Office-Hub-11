@@ -49,12 +49,28 @@ function yearsOfService(startDate: string | null | undefined) {
   return years;
 }
 
-function PrintButton({ label }: { label: string }) {
+function PrintButton({ label, landscape = false }: { label: string; landscape?: boolean }) {
+  const handlePrint = () => {
+    if (landscape) {
+      const existing = document.getElementById("__print_landscape__");
+      if (!existing) {
+        const style = document.createElement("style");
+        style.id = "__print_landscape__";
+        style.textContent = "@page { size: A4 landscape; }";
+        document.head.appendChild(style);
+      }
+      window.onafterprint = () => {
+        document.getElementById("__print_landscape__")?.remove();
+        window.onafterprint = null;
+      };
+    }
+    window.print();
+  };
   return (
     <Button
       variant="outline"
       size="sm"
-      onClick={() => window.print()}
+      onClick={handlePrint}
       className="print:hidden"
       data-testid="button-print"
     >
@@ -524,7 +540,7 @@ function MedewerkerStatusTab({ users }: { users: UserExt[] }) {
               ))}
             </SelectContent>
           </Select>
-          <PrintButton label="Afdrukken" />
+          <PrintButton label="Afdrukken" landscape />
         </div>
       </div>
 
