@@ -370,7 +370,7 @@ function StatusRapport({
 
   const filtered = users.filter(u => {
     const matchStatus = filterKey === "actief" ? u.active : !u.active;
-    const matchPerson = selectedUserId === "all" || u.id === selectedUserId;
+    const matchPerson = selectedUserId === "" || selectedUserId === "all" || u.id === selectedUserId;
     return matchStatus && matchPerson;
   });
 
