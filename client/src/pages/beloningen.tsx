@@ -2168,6 +2168,34 @@ function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
     onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
   });
 
+  const reorderActiesMutation = useMutation({
+    mutationFn: (ids: string[]) => apiRequest("PATCH", `/api/jaarplan/${jaarplanId}/acties/reorder`, { ids }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan/onderdelen", onderdeel.id, "acties"] }),
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan/onderdelen", onderdeel.id, "acties"] });
+      toast({ title: "Volgorde opslaan mislukt", variant: "destructive" });
+    },
+  });
+
+  const handleMoveActie = (fromIndex: number, toIndex: number) => {
+    const reordered = [...acties];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const newIds = reordered.map(a => a.id);
+
+    const actiesQueryKey = ["/api/jaarplan/onderdelen", onderdeel.id, "acties"];
+    const currentData = queryClient.getQueryData<JaarplanActie[]>(actiesQueryKey);
+    if (currentData) {
+      const idToOrder = new Map(newIds.map((id, i) => [id, i]));
+      const updated = [...currentData]
+        .map(a => ({ ...a, sortOrder: idToOrder.has(a.id) ? idToOrder.get(a.id)! : a.sortOrder }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      queryClient.setQueryData(actiesQueryKey, updated);
+    }
+
+    reorderActiesMutation.mutate(newIds);
+  };
+
   const renameOnderdeelMutation = useMutation({
     mutationFn: () => apiRequest("PATCH", `/api/jaarplan/onderdelen/${onderdeel.id}`, { naam: editNaam }),
     onSuccess: () => {
@@ -2223,10 +2251,14 @@ function OnderdeelSection({ onderdeel, jaarplanId, canEdit, onDelete }: {
         <div className="p-2 space-y-1">
           {acties.length > 0 ? (
             <div className="divide-y divide-border/40">
-              {acties.map(actie => (
+              {acties.map((actie, idx) => (
                 <ActieRow key={actie.id} actie={actie} canEdit={canEdit}
                   onDelete={() => deleteActieMutation.mutate(actie.id)}
                   onStatusChange={status => updateActieStatusMutation.mutate({ id: actie.id, status })}
+                  onMoveUp={idx > 0 ? () => handleMoveActie(idx, idx - 1) : undefined}
+                  onMoveDown={idx < acties.length - 1 ? () => handleMoveActie(idx, idx + 1) : undefined}
+                  isFirst={idx === 0}
+                  isLast={idx === acties.length - 1}
                 />
               ))}
             </div>
