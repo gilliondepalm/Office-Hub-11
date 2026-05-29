@@ -862,7 +862,7 @@ export default function KalenderPage() {
     },
   });
 
-  const canManage = isAdminRole(user?.role) || user?.role === "manager";
+  const canManage = isAdminRole(user?.role) || user?.role === "manager" || user?.role === "manager_az";
 
   const allEntries = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -986,13 +986,13 @@ export default function KalenderPage() {
       <div className="p-6 space-y-4">
       <div className="flex items-center justify-end gap-4 flex-wrap">
         <div className="flex gap-2 flex-wrap">
-          {isAdminRole(user?.role) && (
+          {(isAdminRole(user?.role) || user?.role === "manager_az") && (
             <Button variant="outline" onClick={() => setHolidayUploadOpen(true)} data-testid="button-upload-holidays">
               <Upload className="h-4 w-4 mr-2" />
               Vakantiedagen
             </Button>
           )}
-          {(isAdminRole(user?.role) || user?.role === "manager") && (
+          {(isAdminRole(user?.role) || user?.role === "manager" || user?.role === "manager_az") && (
             <Button onClick={() => { setCreateDate(""); setCreateOpen(true); }} data-testid="button-add-event">
               <Plus className="h-4 w-4 mr-2" />
               Nieuw Evenement

@@ -1046,7 +1046,7 @@ export async function registerRoutes(
 
   app.post("/api/official-holidays/single", requireAuth, async (req, res) => {
     const user = req.user as any;
-    if (!isAdminRole(user?.role)) {
+    if (!isAdminRole(user?.role) && user?.role !== "manager_az") {
       return res.status(403).json({ message: "Geen toegang" });
     }
     try {
@@ -1070,7 +1070,7 @@ export async function registerRoutes(
 
   app.post("/api/official-holidays", requireAuth, async (req, res) => {
     const user = req.user as any;
-    if (!isAdminRole(user?.role)) {
+    if (!isAdminRole(user?.role) && user?.role !== "manager_az") {
       return res.status(403).json({ message: "Geen toegang" });
     }
     try {
@@ -1103,7 +1103,7 @@ export async function registerRoutes(
 
   app.delete("/api/official-holidays/:id", requireAuth, async (req, res) => {
     const user = req.user as any;
-    if (!isAdminRole(user?.role)) {
+    if (!isAdminRole(user?.role) && user?.role !== "manager_az") {
       return res.status(403).json({ message: "Geen toegang" });
     }
     await storage.deleteOfficialHoliday(req.params.id);
