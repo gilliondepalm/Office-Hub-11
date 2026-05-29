@@ -2668,33 +2668,106 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete, onMoveUp, onMoveDow
   );
 }
 
-function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange }: {
+function MedewerkerActieRow({ actie, canEdit, onDelete, onStatusChange, onUpdate }: {
   actie: MedewerkerJaarplanActie;
   canEdit: boolean;
   onDelete: () => void;
   onStatusChange: (status: string) => void;
+  onUpdate?: (data: { datum?: string; actie?: string; startdatum?: string | null; einddatum?: string | null; voortgang?: number | null }) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editDatum, setEditDatum] = useState(actie.datum ?? "");
+  const [editTekst, setEditTekst] = useState(actie.actie ?? "");
+  const [editStart, setEditStart] = useState(actie.startdatum ?? "");
+  const [editEind, setEditEind] = useState(actie.einddatum ?? "");
+  const [editVoortgang, setEditVoortgang] = useState(actie.voortgang != null ? String(actie.voortgang) : "");
+
   const statusOpt = statusOptions.find(s => s.value === (actie.status ?? "niet gestart")) || statusOptions[0];
+
+  if (editing) {
+    return (
+      <div className="bg-muted/40 rounded-md p-2 my-1 space-y-2 text-xs">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground shrink-0">Datum:</span>
+            <Input type="date" value={editDatum} onChange={e => setEditDatum(e.target.value)} className="h-6 text-xs w-32" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground shrink-0">Startdatum:</span>
+            <Input type="date" value={editStart} onChange={e => setEditStart(e.target.value)} className="h-6 text-xs w-32" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground shrink-0">Einddatum:</span>
+            <Input type="date" value={editEind} onChange={e => setEditEind(e.target.value)} className="h-6 text-xs w-32" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground shrink-0">Voortgang %:</span>
+            <Input type="number" min="0" max="100" value={editVoortgang} onChange={e => setEditVoortgang(e.target.value)} className="h-6 text-xs w-16" />
+          </div>
+        </div>
+        <Textarea value={editTekst} onChange={e => setEditTekst(e.target.value)} rows={2} className="text-xs w-full" />
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => setEditing(false)}>Annuleren</Button>
+          <Button size="sm" className="h-6 text-xs" onClick={() => {
+            if (editTekst.trim() && onUpdate) {
+              onUpdate({
+                datum: editDatum || undefined,
+                actie: editTekst.trim(),
+                startdatum: editStart || null,
+                einddatum: editEind || null,
+                voortgang: editVoortgang !== "" ? Number(editVoortgang) : null,
+              });
+              setEditing(false);
+            }
+          }}>
+            <Save className="h-3 w-3 mr-1" />Opslaan
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-start gap-2 text-xs py-1.5">
-      <span className="text-muted-foreground whitespace-nowrap font-medium min-w-[80px]">{formatDate(actie.datum)}</span>
-      <p className="flex-1 whitespace-pre-wrap">{actie.actie}</p>
-      {canEdit ? (
-        <Select value={actie.status ?? "niet gestart"} onValueChange={onStatusChange}>
-          <SelectTrigger className={`h-5 w-auto text-[10px] px-1.5 py-0 border-0 ${statusOpt.color}`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      ) : (
-        <Badge variant="outline" className={`text-[9px] ${statusOpt.color}`}>{statusOpt.label}</Badge>
-      )}
-      {canEdit && (
-        <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0" onClick={onDelete}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
+    <div className="py-1.5 text-xs">
+      <div className="flex items-start gap-2">
+        <span className="text-muted-foreground whitespace-nowrap font-medium min-w-[80px]">{formatDate(actie.datum)}</span>
+        <p className="flex-1 whitespace-pre-wrap">{actie.actie}</p>
+        {canEdit ? (
+          <Select value={actie.status ?? "niet gestart"} onValueChange={onStatusChange}>
+            <SelectTrigger className={`h-5 w-auto text-[10px] px-1.5 py-0 border-0 ${statusOpt.color}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Badge variant="outline" className={`text-[9px] ${statusOpt.color}`}>{statusOpt.label}</Badge>
+        )}
+        {canEdit && (
+          <>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0" onClick={() => setEditing(true)}>
+              <Pencil className="h-2.5 w-2.5" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0 text-destructive hover:text-destructive" onClick={onDelete}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+      </div>
+      {(actie.startdatum || actie.einddatum || actie.voortgang != null) && (
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 ml-[88px] text-[10px] text-muted-foreground">
+          {(actie.startdatum || actie.einddatum) && (
+            <span>
+              {actie.startdatum ? formatDate(actie.startdatum) : ""}
+              {actie.startdatum && actie.einddatum ? " – " : ""}
+              {actie.einddatum ? formatDate(actie.einddatum) : ""}
+            </span>
+          )}
+          {actie.voortgang != null && (
+            <span className="font-medium">{actie.voortgang}% voortgang</span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -2711,6 +2784,9 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
   const [showActieForm, setShowActieForm] = useState(false);
   const [actieText, setActieText] = useState("");
   const [actieDatum, setActieDatum] = useState(new Date().toISOString().split("T")[0]);
+  const [actieStart, setActieStart] = useState("");
+  const [actieEind, setActieEind] = useState("");
+  const [actieVoortgang, setActieVoortgang] = useState("");
 
   const { data: acties = [] } = useQuery<MedewerkerJaarplanActie[]>({
     queryKey: ["/api/medewerker-jaarplan", item.id, "acties"],
@@ -2722,11 +2798,19 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
     enabled: expanded,
   });
 
+  const resetForm = () => { setActieText(""); setActieDatum(new Date().toISOString().split("T")[0]); setActieStart(""); setActieEind(""); setActieVoortgang(""); };
+
   const addActieMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/medewerker-jaarplan/${item.id}/acties`, { datum: actieDatum, actie: actieText }),
+    mutationFn: () => apiRequest("POST", `/api/medewerker-jaarplan/${item.id}/acties`, {
+      datum: actieDatum,
+      actie: actieText,
+      startdatum: actieStart || undefined,
+      einddatum: actieEind || undefined,
+      voortgang: actieVoortgang !== "" ? Number(actieVoortgang) : undefined,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan", item.id, "acties"] });
-      setActieText(""); setShowActieForm(false);
+      resetForm(); setShowActieForm(false);
     },
     onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
   });
@@ -2739,6 +2823,13 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
   const statusActieMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => apiRequest("PATCH", `/api/medewerker-jaarplan/acties/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan", item.id, "acties"] }),
+  });
+
+  const updateActieMutation = useMutation({
+    mutationFn: ({ id, ...data }: { id: string; datum?: string; actie?: string; startdatum?: string | null; einddatum?: string | null; voortgang?: number | null }) =>
+      apiRequest("PATCH", `/api/medewerker-jaarplan/acties/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/medewerker-jaarplan", item.id, "acties"] }),
+    onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
   });
 
   const statusOpt = statusOptions.find(s => s.value === (item.status ?? "niet gestart")) || statusOptions[0];
@@ -2798,6 +2889,7 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
               canEdit={canEdit}
               onDelete={() => deleteActieMutation.mutate(a.id)}
               onStatusChange={(status) => statusActieMutation.mutate({ id: a.id, status })}
+              onUpdate={data => updateActieMutation.mutate({ id: a.id, ...data })}
             />
           ))}
           {acties.length === 0 && <p className="text-xs text-muted-foreground py-1">Nog geen activiteiten</p>}
@@ -2808,9 +2900,23 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
           )}
           {canEdit && showActieForm && (
             <div className="bg-muted/40 rounded-md p-2 mt-2 space-y-2">
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground shrink-0">Datum:</span>
-                <Input type="date" value={actieDatum} onChange={e => setActieDatum(e.target.value)} className="h-7 text-xs w-36" />
+              <div className="flex flex-wrap gap-x-3 gap-y-1 items-center text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground shrink-0">Datum:</span>
+                  <Input type="date" value={actieDatum} onChange={e => setActieDatum(e.target.value)} className="h-7 text-xs w-32" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground shrink-0">Startdatum:</span>
+                  <Input type="date" value={actieStart} onChange={e => setActieStart(e.target.value)} className="h-7 text-xs w-32" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground shrink-0">Einddatum:</span>
+                  <Input type="date" value={actieEind} onChange={e => setActieEind(e.target.value)} className="h-7 text-xs w-32" />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground shrink-0">Voortgang %:</span>
+                  <Input type="number" min="0" max="100" value={actieVoortgang} onChange={e => setActieVoortgang(e.target.value)} className="h-7 text-xs w-16" />
+                </div>
               </div>
               <Textarea
                 value={actieText}
@@ -2821,7 +2927,7 @@ function MedewerkerJaarplanItemCard({ item, canEdit, onEdit, onDelete }: {
                 autoFocus
               />
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowActieForm(false); setActieText(""); }}>
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setShowActieForm(false); resetForm(); }}>
                   Annuleren
                 </Button>
                 <Button size="sm" className="h-7 text-xs" onClick={() => { if (actieText.trim()) addActieMutation.mutate(); }} disabled={!actieText.trim() || addActieMutation.isPending}>

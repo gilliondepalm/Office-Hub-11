@@ -356,6 +356,9 @@ export const medewerkerJaarplanActies = pgTable("medewerker_jaarplan_acties", {
   datum: date("datum").notNull(),
   actie: text("actie").notNull(),
   status: text("status").default("niet gestart"),
+  startdatum: date("startdatum"),
+  einddatum: date("einddatum"),
+  voortgang: integer("voortgang"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
