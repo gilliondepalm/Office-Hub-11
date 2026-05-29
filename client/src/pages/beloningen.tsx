@@ -2280,14 +2280,29 @@ function JaarplanItemCard({ item, canEdit, onEdit, onDelete, onMoveUp, onMoveDow
   const reorderActiesMutation = useMutation({
     mutationFn: (ids: string[]) => apiRequest("PATCH", `/api/jaarplan/${item.id}/acties/reorder`, { ids }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", item.id, "acties"] }),
-    onError: () => toast({ title: "Volgorde opslaan mislukt", variant: "destructive" }),
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", item.id, "acties"] });
+      toast({ title: "Volgorde opslaan mislukt", variant: "destructive" });
+    },
   });
 
   const handleMoveActie = (actiesArr: JaarplanActie[], fromIndex: number, toIndex: number) => {
     const reordered = [...actiesArr];
     const [moved] = reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, moved);
-    reorderActiesMutation.mutate(reordered.map(a => a.id));
+    const newIds = reordered.map(a => a.id);
+
+    const actiesQueryKey = ["/api/jaarplan", item.id, "acties"];
+    const currentData = queryClient.getQueryData<JaarplanActie[]>(actiesQueryKey);
+    if (currentData) {
+      const idToOrder = new Map(newIds.map((id, i) => [id, i]));
+      const updated = [...currentData]
+        .map(a => ({ ...a, sortOrder: idToOrder.has(a.id) ? idToOrder.get(a.id)! : a.sortOrder }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      queryClient.setQueryData(actiesQueryKey, updated);
+    }
+
+    reorderActiesMutation.mutate(newIds);
   };
 
   const { data: onderdelen = [] } = useQuery<JaarplanOnderdeel[]>({
@@ -2943,15 +2958,30 @@ function JaarplanSection({ currentUser }: { currentUser?: User | null }) {
 
   const reorderItemsMutation = useMutation({
     mutationFn: (ids: string[]) => apiRequest("PATCH", "/api/jaarplan/reorder", { ids }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan"] }),
-    onError: () => toast({ title: "Volgorde opslaan mislukt", variant: "destructive" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", selectedYear, adminAfdeling] }),
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jaarplan", selectedYear, adminAfdeling] });
+      toast({ title: "Volgorde opslaan mislukt", variant: "destructive" });
+    },
   });
 
   const handleMoveItem = (afdelingItems: JaarplanItem[], fromIndex: number, toIndex: number) => {
     const reordered = [...afdelingItems];
     const [moved] = reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, moved);
-    reorderItemsMutation.mutate(reordered.map(i => i.id));
+    const newIds = reordered.map(i => i.id);
+
+    const itemsQueryKey = ["/api/jaarplan", selectedYear, adminAfdeling];
+    const currentData = queryClient.getQueryData<JaarplanItem[]>(itemsQueryKey);
+    if (currentData) {
+      const idToOrder = new Map(newIds.map((id, i) => [id, i]));
+      const updated = [...currentData]
+        .map(item => ({ ...item, sortOrder: idToOrder.has(item.id) ? idToOrder.get(item.id)! : item.sortOrder }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      queryClient.setQueryData(itemsQueryKey, updated);
+    }
+
+    reorderItemsMutation.mutate(newIds);
   };
 
   const groupedByAfdeling = items.reduce((acc, item) => {
